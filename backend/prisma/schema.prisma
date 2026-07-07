@@ -1,0 +1,228 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma_ahbb"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model td_usuario_ahbb {
+  id_usuario_ahbb                 Int      @id @default(autoincrement())
+  cedula_ahbb                     String   @unique @db.VarChar(50)
+  nombre_ahbb                     String   @db.VarChar(100)
+  apellido_ahbb                   String   @db.VarChar(100)
+  correo_ahbb                     String   @unique @db.VarChar(150)
+  contrasena_ahbb                 String   @db.VarChar(255)
+  rol_ahbb                        String?  @default("ALUMNO") @db.VarChar(20)
+  firmaDigital_ahbb               String?  @db.Text
+  estadoCuenta_ahbb               String   @default("PENDIENTE_APROBACION") @db.VarChar(40)
+  requiereCambioContrasena_ahbb   Boolean  @default(false)
+  referenciaPagoMovil_ahbb        String?  @db.VarChar(120)
+  aprobadoPorUsuarioId_ahbb       Int?
+  creadoEn_ahbb                   DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ahbb DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  cursos                    td_curso_ahbb[]
+  inscripciones             td_inscripcion_ahbb[]
+  auditoriasAprobadas_ahbb  td_auditoria_aprobacion_ahbb[] @relation("AprobadorAuditoria")
+  auditoriasUsuario_ahbb    td_auditoria_aprobacion_ahbb[] @relation("UsuarioAuditado")
+
+  // Relaciones Tienda (E-Commerce)
+  carrito_ahbb              td_carrito_ahbb[]
+  facturas_ahbb             td_factura_ahbb[]
+  favoritos_ahbb            td_favorito_ahbb[]
+}
+
+model td_curso_ahbb {
+  id_curso_ahbb                Int      @id @default(autoincrement())
+  nombre_ahbb                  String   @db.VarChar(200)
+  tematica_ahbb                String   @db.VarChar(200)
+  descripcion_ahbb             String?  @db.Text
+  diasDefinidos_ahbb           Int
+  horasDefinidas_ahbb          Int
+  fechaInicio_ahbb             DateTime? @db.Timestamp(6)
+  fechaFin_ahbb                DateTime? @db.Timestamp(6)
+  fechaDuracion_ahbb           DateTime? @db.Timestamp(6)
+  topeEstudiantes_ahbb         Int?     @default(5)
+  temarioTexto_ahbb            String?  @db.Text
+  imagenBasePdf_ahbb           String?  @db.Text
+  imagenBloqueada_ahbb         Boolean? @default(false)
+  isPublished_ahbb             Boolean  @default(false)
+  estadoAprobacion_ahbb        String   @default("ACTIVO") @db.VarChar(20)
+  motivoRechazo_ahbb           String?  @db.Text
+  mensajeCorreccion_ahbb       String?  @db.Text
+  id_usuario_curso_ahbb        Int
+  id_curso_curso_ahbb          Int?
+  creadoEn_ahbb                DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ahbb           DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  profesor      td_usuario_ahbb        @relation(fields: [id_usuario_curso_ahbb], references: [id_usuario_ahbb])
+  prelacion     td_curso_ahbb?         @relation("Prelacion", fields: [id_curso_curso_ahbb], references: [id_curso_ahbb])
+  prelaciones   td_curso_ahbb[]        @relation("Prelacion")
+  horarios      td_horario_ahbb[]
+  inscripciones td_inscripcion_ahbb[]
+  sesiones      td_sesion_curso_ahbb[]
+}
+
+model td_sesion_curso_ahbb {
+  id_sesion_ahbb        Int      @id @default(autoincrement())
+  nroSesion_ahbb        Int
+  fechaSesion_ahbb      DateTime @db.Date
+  horaInicio_ahbb       String   @db.VarChar(10)
+  horaFin_ahbb          String   @db.VarChar(10)
+  horasDuracion_ahbb    Decimal  @db.Decimal(4, 2)
+  diaSemana_ahbb        String   @db.VarChar(20)
+  id_curso_sesion_ahbb  Int
+
+  // Relaciones
+  curso                 td_curso_ahbb @relation(fields: [id_curso_sesion_ahbb], references: [id_curso_ahbb], onDelete: Cascade)
+}
+
+
+model td_horario_ahbb {
+  id_horario_ahbb       Int      @id @default(autoincrement())
+  diaSemana_ahbb        String   @db.VarChar(20)
+  horaInicio_ahbb       String   @db.VarChar(10)
+  horaFin_ahbb          String   @db.VarChar(10)
+  id_curso_horario_ahbb  Int
+
+  // Relaciones
+  curso                 td_curso_ahbb @relation(fields: [id_curso_horario_ahbb], references: [id_curso_ahbb], onDelete: Cascade)
+}
+
+model td_inscripcion_ahbb {
+  id_inscripcion_ahbb         Int      @id @default(autoincrement())
+  estatus_ahbb                String?  @default("INSCRITO") @db.VarChar(50)
+  intento_ahbb                Int      @default(1)
+  id_usuario_inscripcion_ahbb Int
+  id_curso_inscripcion_ahbb   Int
+  creadoEn_ahbb               DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ahbb           DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  alumno                      td_usuario_ahbb @relation(fields: [id_usuario_inscripcion_ahbb], references: [id_usuario_ahbb], onDelete: Cascade)
+  curso                       td_curso_ahbb   @relation(fields: [id_curso_inscripcion_ahbb], references: [id_curso_ahbb], onDelete: Cascade)
+  certificado                 td_certificado_ahbb?
+
+  // @@unique removed: allows re-enrollment when student was REPROBADO
+  @@index([id_usuario_inscripcion_ahbb, id_curso_inscripcion_ahbb])
+}
+
+model td_certificado_ahbb {
+  id_certificado_ahbb             Int      @id @default(autoincrement())
+  codigoQrUrl_ahbb                String   @db.Text
+  id_inscripcion_certificado_ahbb Int      @unique
+  creadoEn_ahbb                   DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inscripcion                     td_inscripcion_ahbb @relation(fields: [id_inscripcion_certificado_ahbb], references: [id_inscripcion_ahbb], onDelete: Cascade)
+}
+
+model td_configuracionglobal_ahbb {
+  id_configuracionglobal_ahbb   Int      @id @default(autoincrement())
+  imagenCertificadoGeneral_ahbb String?  @db.Text
+}
+
+model td_auditoria_aprobacion_ahbb {
+  id_auditoria_aprobacion_ahbb Int      @id @default(autoincrement())
+  tipoOperacion_ahbb           String   @db.VarChar(50)
+  referenciaOperacion_ahbb     String   @db.VarChar(120)
+  observacion_ahbb             String?  @db.Text
+  id_usuario_auditado_ahbb     Int
+  id_aprobador_ahbb            Int
+  creadoEn_ahbb                DateTime @default(now()) @db.Timestamp(6)
+
+  usuarioAuditado_ahbb         td_usuario_ahbb @relation("UsuarioAuditado", fields: [id_usuario_auditado_ahbb], references: [id_usuario_ahbb])
+  aprobador_ahbb               td_usuario_ahbb @relation("AprobadorAuditoria", fields: [id_aprobador_ahbb], references: [id_usuario_ahbb])
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO TIENDA (E-COMMERCE) — ACADEMIA H&B
+// ══════════════════════════════════════════════════════════════
+
+model td_producto_ahbb {
+  id_producto_ahbb       Int      @id @default(autoincrement())
+  nombre_ahbb            String   @db.VarChar(150)
+  descripcion_ahbb       String?  @db.Text
+  precio_ahbb            Decimal  @db.Decimal(10, 2)
+  stock_ahbb             Int      @default(0)
+  categoria_ahbb         String   @db.VarChar(50)
+  imagen_ahbb            String?  @db.Text
+  estado_producto_ahbb   String   @default("activo") @db.VarChar(20)
+  creadoEn_ahbb          DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ahbb     DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  itemsCarrito_ahbb      td_carrito_ahbb[]
+  detallesFactura_ahbb   td_detalle_factura_ahbb[]
+  favoritos_ahbb         td_favorito_ahbb[]
+}
+
+model td_carrito_ahbb {
+  id_carrito_ahbb          Int      @id @default(autoincrement())
+  cantidad_ahbb            Int      @default(1)
+  fechaAgregado_ahbb       DateTime? @default(now()) @db.Timestamp(6)
+  id_usuario_carrito_ahbb  Int
+  id_producto_carrito_ahbb Int
+
+  // Relaciones
+  usuario_ahbb   td_usuario_ahbb  @relation(fields: [id_usuario_carrito_ahbb], references: [id_usuario_ahbb], onDelete: Cascade)
+  producto_ahbb  td_producto_ahbb @relation(fields: [id_producto_carrito_ahbb], references: [id_producto_ahbb], onDelete: Cascade)
+
+  @@unique([id_usuario_carrito_ahbb, id_producto_carrito_ahbb])
+}
+
+model td_factura_ahbb {
+  id_factura_ahbb           Int      @id @default(autoincrement())
+  nroReferenciaPago_ahbb    String   @db.VarChar(50)
+  fechaFactura_ahbb         DateTime? @default(now()) @db.Timestamp(6)
+  total_ahbb                Decimal  @db.Decimal(10, 2)
+  estadoFactura_ahbb        String   @default("pendiente") @db.VarChar(20)
+  id_usuario_factura_ahbb   Int
+
+  // Relaciones
+  usuario_ahbb   td_usuario_ahbb          @relation(fields: [id_usuario_factura_ahbb], references: [id_usuario_ahbb], onDelete: Cascade)
+  detalles_ahbb  td_detalle_factura_ahbb[]
+  reportes_ahbb  td_reportes_facturas_ahbb[]
+}
+
+model td_reportes_facturas_ahbb {
+  id_reporte_ahbb           Int      @id @default(autoincrement())
+  id_factura_reporte_ahbb   Int
+  qr_base64_ahbb            String   @db.Text
+  creadoEn_ahbb             DateTime @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  factura_ahbb   td_factura_ahbb   @relation(fields: [id_factura_reporte_ahbb], references: [id_factura_ahbb], onDelete: Cascade)
+}
+
+model td_detalle_factura_ahbb {
+  id_detalle_factura_ahbb     Int     @id @default(autoincrement())
+  cantidad_ahbb               Int
+  precioUnitario_ahbb         Decimal @db.Decimal(10, 2)
+  id_factura_detalle_ahbb     Int
+  id_producto_detalle_ahbb    Int
+
+  // Relaciones
+  factura_ahbb   td_factura_ahbb   @relation(fields: [id_factura_detalle_ahbb], references: [id_factura_ahbb], onDelete: Cascade)
+  producto_ahbb  td_producto_ahbb  @relation(fields: [id_producto_detalle_ahbb], references: [id_producto_ahbb])
+}
+
+model td_favorito_ahbb {
+  id_favorito_ahbb           Int      @id @default(autoincrement())
+  fechaAgregado_ahbb         DateTime? @default(now()) @db.Timestamp(6)
+  id_usuario_favorito_ahbb   Int
+  id_producto_favorito_ahbb  Int
+
+  // Relaciones
+  usuario_ahbb   td_usuario_ahbb  @relation(fields: [id_usuario_favorito_ahbb], references: [id_usuario_ahbb], onDelete: Cascade)
+  producto_ahbb  td_producto_ahbb @relation(fields: [id_producto_favorito_ahbb], references: [id_producto_ahbb], onDelete: Cascade)
+
+  @@unique([id_usuario_favorito_ahbb, id_producto_favorito_ahbb])
+}
