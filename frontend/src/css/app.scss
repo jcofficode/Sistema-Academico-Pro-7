@@ -1,0 +1,121 @@
+// app global css in SCSS form
+// Estilos globales del sistema que complementan el Quasar theme
+// y lo alinean con el design system de la landing page.
+
+// =============================================
+// Tipografía del sistema (consistente con landing)
+// =============================================
+body {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// =============================================
+// Overrides globales de componentes Quasar
+// =============================================
+
+// Cards con bordes más suaves y sombras consistentes
+.q-card {
+  border-radius: 12px !important;
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+// Botones con bordes redondeados
+.q-btn {
+  border-radius: 8px !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+}
+
+// Inputs con estilo suave
+.q-field--outlined .q-field__control {
+  border-radius: 8px !important;
+}
+
+// Badge con font más legible
+.q-badge {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+// =============================================
+// Drawer / Sidebar personalizado
+// =============================================
+.q-drawer {
+  // Efecto de gradiente sutil en el sidebar
+  background: linear-gradient(180deg, #0f172a 0%, #1b2a4a 100%) !important;
+}
+
+.q-drawer .q-item {
+  border-radius: 8px;
+  margin: 2px 8px;
+  transition: all 0.2s ease;
+}
+
+.q-drawer .q-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.q-drawer .q-item.q-router-link--active,
+.q-drawer .q-item--active {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #f59e0b !important;
+}
+
+.q-drawer .q-item.q-router-link--active .q-icon,
+.q-drawer .q-item--active .q-icon {
+  color: #f59e0b !important;
+}
+
+// =============================================
+// Header personalizado
+// =============================================
+.q-header {
+  background: linear-gradient(90deg, #0f172a 0%, #1b2a4a 100%) !important;
+}
+
+.q-toolbar__title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+// =============================================
+// Páginas del sistema
+// =============================================
+.q-page {
+  background: #f8fafc;
+}
+
+// Scrollbars genéricos para toda la aplicación (asegura sobreescribir estilos de Quasar)
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #1b2a4a !important; /* Mismo azul naval oscuro del sidebar */
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #2a3f6c !important; /* Azul más claro al hover */
+}
+
+// Sobreescrituras específicas para el componente nativo de scroll de Quasar (QScrollArea)
+.q-scrollarea__thumb {
+  background-color: #1b2a4a !important;
+  opacity: 1 !important;
+}

@@ -1,0 +1,479 @@
+/* ============================================================
+   main_ah.css — Design System Global para Hidalgo Academy
+   Contiene: variables CSS, tipografía, utilidades, animaciones
+   y estilos base con el sufijo _ah para personalización.
+   ============================================================ */
+
+/* Importar fuentes de Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap");
+
+/* ========================
+   Variables CSS Globales
+   ======================== */
+:root {
+  /* Colores principales de Hidalgo Academy */
+  --color-primario_ah: #1b2a4a;
+  --color-primario-claro_ah: #2d4a7a;
+  --color-acento_ah: #f59e0b;
+  --color-acento-hover_ah: #d97706;
+  --color-secundario_ah: #3b82f6;
+  --color-secundario-claro_ah: #60a5fa;
+
+  /* Colores de fondo */
+  --color-fondo_ah: #f8fafc;
+  --color-fondo-oscuro_ah: #0f172a;
+  --color-fondo-tarjeta_ah: #ffffff;
+  --color-fondo-seccion_ah: #f1f5f9;
+
+  /* Colores de texto */
+  --color-texto_ah: #1e293b;
+  --color-texto-claro_ah: #64748b;
+  --color-texto-blanco_ah: #f8fafc;
+
+  /* Bordes y sombras */
+  --color-borde_ah: #e2e8f0;
+  --sombra-suave_ah: 0 2px 8px rgba(27, 42, 74, 0.08);
+  --sombra-media_ah: 0 4px 16px rgba(27, 42, 74, 0.12);
+  --sombra-fuerte_ah: 0 8px 32px rgba(27, 42, 74, 0.18);
+  --sombra-acento_ah: 0 4px 16px rgba(245, 158, 11, 0.3);
+
+  /* Tipografía */
+  --fuente-principal_ah: "Inter", system-ui, -apple-system, sans-serif;
+  --fuente-titulo_ah: "Outfit", "Inter", sans-serif;
+
+  /* Espaciado */
+  --espacio-xs_ah: 0.25rem;
+  --espacio-sm_ah: 0.5rem;
+  --espacio-md_ah: 1rem;
+  --espacio-lg_ah: 1.5rem;
+  --espacio-xl_ah: 2rem;
+  --espacio-2xl_ah: 3rem;
+  --espacio-3xl_ah: 4rem;
+  --espacio-4xl_ah: 6rem;
+
+  /* Bordes redondeados */
+  --radio-sm_ah: 0.375rem;
+  --radio-md_ah: 0.5rem;
+  --radio-lg_ah: 0.75rem;
+  --radio-xl_ah: 1rem;
+  --radio-completo_ah: 9999px;
+
+  /* Transiciones */
+  --transicion-rapida_ah: 0.2s ease;
+  --transicion-media_ah: 0.3s ease;
+  --transicion-lenta_ah: 0.5s ease;
+
+  /* Ancho máximo del contenedor */
+  --ancho-max_ah: 1200px;
+}
+
+/* ========================
+   Reset y Base
+   ======================== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--fuente-principal_ah);
+  color: var(--color-texto_ah);
+  background-color: var(--color-fondo_ah);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color var(--transicion-rapida_ah);
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ========================
+   Tipografía
+   ======================== */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--fuente-titulo_ah);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-primario_ah);
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+h2 {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+h3 {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+h4 {
+  font-size: 1.25rem;
+}
+
+p {
+  color: var(--color-texto-claro_ah);
+  line-height: 1.7;
+}
+
+/* ========================
+   Clases Utilitarias _ah
+   ======================== */
+
+/* Contenedor principal centrado */
+.contenedor_ah {
+  width: 100%;
+  max-width: var(--ancho-max_ah);
+  margin: 0 auto;
+  padding: 0 var(--espacio-lg_ah);
+}
+
+/* Sección con padding vertical */
+.seccion_ah {
+  padding: var(--espacio-4xl_ah) 0;
+}
+
+/* Título de sección con línea decorativa */
+.titulo-seccion_ah {
+  text-align: center;
+  margin-bottom: var(--espacio-3xl_ah);
+  position: relative;
+}
+
+.titulo-seccion_ah h2 {
+  margin-bottom: var(--espacio-md_ah);
+}
+
+.titulo-seccion_ah p {
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 1.1rem;
+}
+
+.titulo-seccion_ah::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-acento_ah),
+    var(--color-secundario_ah)
+  );
+  margin: var(--espacio-lg_ah) auto 0;
+  border-radius: var(--radio-completo_ah);
+}
+
+/* ========================
+   Botones _ah
+   ======================== */
+.btn_ah {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-sm_ah);
+  padding: 0.75rem 1.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: var(--radio-lg_ah);
+  transition: all var(--transicion-media_ah);
+  cursor: pointer;
+  border: 2px solid transparent;
+  letter-spacing: 0.02em;
+}
+
+/* Botón primario — dorado */
+.btn-primario_ah {
+  background: linear-gradient(
+    135deg,
+    var(--color-acento_ah),
+    var(--color-acento-hover_ah)
+  );
+  color: white;
+  box-shadow: var(--sombra-acento_ah);
+}
+
+.btn-primario_ah:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(245, 158, 11, 0.4);
+}
+
+/* Botón secundario — borde azul */
+.btn-secundario_ah {
+  background: transparent;
+  color: var(--color-secundario_ah);
+  border-color: var(--color-secundario_ah);
+}
+
+.btn-secundario_ah:hover {
+  background: var(--color-secundario_ah);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Botón outline blanco (para fondos oscuros) */
+.btn-outline-blanco_ah {
+  background: transparent;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-outline-blanco_ah:hover {
+  background: white;
+  color: var(--color-primario_ah);
+}
+
+/* Botón pequeño */
+.btn-sm_ah {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* Botón agregar al carrito */
+.btn-carrito_ah {
+  background: var(--color-primario_ah);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radio-md_ah);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all var(--transicion-media_ah);
+}
+
+.btn-carrito_ah:hover {
+  background: var(--color-primario-claro_ah);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-media_ah);
+}
+
+/* ========================
+   Tarjetas _ah
+   ======================== */
+.tarjeta_ah {
+  background: var(--color-fondo-tarjeta_ah);
+  border-radius: var(--radio-xl_ah);
+  box-shadow: var(--sombra-suave_ah);
+  overflow: hidden;
+  transition: all var(--transicion-media_ah);
+}
+
+.tarjeta_ah:hover {
+  box-shadow: var(--sombra-media_ah);
+  transform: translateY(-4px);
+}
+
+/* ========================
+   Grid de Productos _ah
+   ======================== */
+.grid-productos_ah {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--espacio-xl_ah);
+}
+
+/* ========================
+   Animaciones _ah
+   ======================== */
+@keyframes fadeInUp_ah {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn_ah {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight_ah {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft_ah {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulso_ah {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes brillar_ah {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Clases de animación reutilizables */
+.animar-entrada_ah {
+  animation: fadeInUp_ah 0.6s ease forwards;
+}
+
+.animar-entrada-retardo1_ah {
+  animation: fadeInUp_ah 0.6s ease 0.1s forwards;
+  opacity: 0;
+}
+
+.animar-entrada-retardo2_ah {
+  animation: fadeInUp_ah 0.6s ease 0.2s forwards;
+  opacity: 0;
+}
+
+.animar-entrada-retardo3_ah {
+  animation: fadeInUp_ah 0.6s ease 0.3s forwards;
+  opacity: 0;
+}
+
+/* ========================
+   Badge / Etiqueta _ah
+   ======================== */
+.badge_ah {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--color-acento_ah);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radio-completo_ah);
+  line-height: 1;
+}
+
+/* ========================
+   Overlay / Fondo oscuro _ah
+   ======================== */
+.overlay_ah {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  animation: fadeIn_ah 0.3s ease;
+}
+
+/* ========================
+   Scrollbar personalizado
+   ======================== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-fondo-seccion_ah);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primario-claro_ah);
+  border-radius: var(--radio-completo_ah);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primario_ah);
+}
+
+/* ========================
+   Media Queries Responsive
+   ======================== */
+@media (max-width: 768px) {
+  .seccion_ah {
+    padding: var(--espacio-2xl_ah) 0;
+  }
+
+  .grid-productos_ah {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--espacio-md_ah);
+  }
+
+  .contenedor_ah {
+    padding: 0 var(--espacio-md_ah);
+  }
+
+  .btn_ah {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-productos_ah {
+    grid-template-columns: 1fr;
+  }
+}

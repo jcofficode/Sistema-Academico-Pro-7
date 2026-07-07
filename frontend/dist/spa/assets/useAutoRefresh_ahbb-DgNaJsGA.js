@@ -1,0 +1,1 @@
+import{A as e,k as t}from"./runtime-core.esm-bundler-DeSBoGAl.js";function n(n,r=3e4,i=!0){let a=null,o=()=>{i&&n(),a=setInterval(()=>void n(),r)},s=()=>{a!==null&&(clearInterval(a),a=null)};return t(o),e(s),{iniciar_ahbb:o,detener_ahbb:s}}export{n as t};
