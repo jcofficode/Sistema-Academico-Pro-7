@@ -36,6 +36,12 @@ model td_usuario_ahbb {
   carrito_ahbb              td_carrito_ahbb[]
   facturas_ahbb             td_factura_ahbb[]
   favoritos_ahbb            td_favorito_ahbb[]
+
+  // Relaciones Módulo Académico (Carreras y Pensums)
+  inscripcionesMaterias_cjgp td_inscripcion_materia_cjgp[]
+  materiasDictadas_cjgp      td_materia_cjgp[] @relation("ProfesorMateria")
+  calificacionesCargadas_jc  td_calificacion_jc[]
+  actasGeneradas_jc          td_acta_jc[]
 }
 
 model td_curso_ahbb {
@@ -225,4 +231,189 @@ model td_favorito_ahbb {
   producto_ahbb  td_producto_ahbb @relation(fields: [id_producto_favorito_ahbb], references: [id_producto_ahbb], onDelete: Cascade)
 
   @@unique([id_usuario_favorito_ahbb, id_producto_favorito_ahbb])
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO ACADÉMICO: CARRERAS, PENSUMS E INSCRIPCIÓN (_cjgp)
+// Trabajo grupal: Coffi, Jorge, Guillermo y Padrino
+// ══════════════════════════════════════════════════════════════
+
+model td_carrera_cjgp {
+  id_carrera_cjgp       Int      @id @default(autoincrement())
+  codigo_cjgp           String   @unique @db.VarChar(20)
+  nombre_cjgp           String   @db.VarChar(200)
+  descripcion_cjgp      String?  @db.Text
+  // Régimen del período académico: SEMESTRAL (2 bloques/año) o TRIMESTRAL (3 bloques/año)
+  regimen_cjgp          String   @default("SEMESTRAL") @db.VarChar(20)
+  duracionAnios_cjgp    Int
+  // Límite estricto de créditos que un alumno puede inscribir por período (Épica 2)
+  limiteCreditos_cjgp   Int      @default(21)
+  estado_cjgp           String   @default("ACTIVA") @db.VarChar(20)
+  creadoEn_cjgp         DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_cjgp    DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  materias_cjgp         td_materia_cjgp[]
+  planesEvaluacion_jc   td_plan_evaluacion_jc[]
+}
+
+model td_materia_cjgp {
+  id_materia_cjgp          Int     @id @default(autoincrement())
+  codigo_cjgp              String  @db.VarChar(20)
+  nombre_cjgp              String  @db.VarChar(200)
+  creditos_cjgp            Int
+  // Bloque (semestre o trimestre) del pensum al que pertenece la materia
+  nroBloque_cjgp           Int
+  id_carrera_materia_cjgp  Int
+  // Profesor asignado por el administrador para dictar la materia
+  id_profesor_materia_cjgp Int?
+  creadoEn_cjgp            DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  carrera_cjgp        td_carrera_cjgp @relation(fields: [id_carrera_materia_cjgp], references: [id_carrera_cjgp], onDelete: Cascade)
+  profesor_cjgp       td_usuario_ahbb? @relation("ProfesorMateria", fields: [id_profesor_materia_cjgp], references: [id_usuario_ahbb])
+  prelaciones_cjgp    td_prelacion_cjgp[] @relation("MateriaConRequisito")
+  esRequisitoDe_cjgp  td_prelacion_cjgp[] @relation("MateriaRequisito")
+  inscripciones_cjgp  td_inscripcion_materia_cjgp[]
+  actas_jc            td_acta_jc[]
+
+  // Un código de materia no puede repetirse dentro de la misma carrera
+  @@unique([id_carrera_materia_cjgp, codigo_cjgp])
+}
+
+// Prelaciones: "Base de Datos II" requiere "Base de Datos I" (Épica 1 y 2)
+model td_prelacion_cjgp {
+  id_prelacion_cjgp          Int @id @default(autoincrement())
+  id_materia_cjgp            Int
+  id_materia_requisito_cjgp  Int
+
+  // Relaciones
+  materia_cjgp    td_materia_cjgp @relation("MateriaConRequisito", fields: [id_materia_cjgp], references: [id_materia_cjgp], onDelete: Cascade)
+  requisito_cjgp  td_materia_cjgp @relation("MateriaRequisito", fields: [id_materia_requisito_cjgp], references: [id_materia_cjgp], onDelete: Cascade)
+
+  @@unique([id_materia_cjgp, id_materia_requisito_cjgp])
+}
+
+model td_periodo_academico_cjgp {
+  id_periodo_cjgp   Int      @id @default(autoincrement())
+  nombre_cjgp       String   @unique @db.VarChar(30)
+  fechaInicio_cjgp  DateTime @db.Date
+  fechaFin_cjgp     DateTime @db.Date
+  // Solo un período puede estar activo a la vez (lo garantiza el servicio)
+  activo_cjgp       Boolean  @default(false)
+  creadoEn_cjgp     DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inscripciones_cjgp    td_inscripcion_materia_cjgp[]
+  planesEvaluacion_jc   td_plan_evaluacion_jc[]
+  actas_jc              td_acta_jc[]
+}
+
+// Historial académico del alumno por materia y período (Épica 2 y 3)
+model td_inscripcion_materia_cjgp {
+  id_inscripcion_materia_cjgp Int      @id @default(autoincrement())
+  // INSCRITO | APROBADO | REPROBADO | RETIRADO
+  estatus_cjgp                String   @default("INSCRITO") @db.VarChar(20)
+  notaFinal_cjgp              Decimal? @db.Decimal(5, 2)
+  id_usuario_im_cjgp          Int
+  id_materia_im_cjgp          Int
+  id_periodo_im_cjgp          Int
+  creadoEn_cjgp               DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_cjgp          DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  alumno_cjgp   td_usuario_ahbb           @relation(fields: [id_usuario_im_cjgp], references: [id_usuario_ahbb], onDelete: Cascade)
+  materia_cjgp  td_materia_cjgp           @relation(fields: [id_materia_im_cjgp], references: [id_materia_cjgp], onDelete: Cascade)
+  periodo_cjgp  td_periodo_academico_cjgp @relation(fields: [id_periodo_im_cjgp], references: [id_periodo_cjgp], onDelete: Cascade)
+  calificaciones_jc td_calificacion_jc[]
+
+  // Un alumno solo puede cursar una vez la misma materia dentro de un período
+  @@unique([id_usuario_im_cjgp, id_materia_im_cjgp, id_periodo_im_cjgp])
+  @@index([id_usuario_im_cjgp, id_periodo_im_cjgp])
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO CONTROL DE ESTUDIOS (_jc)
+// Plan de evaluación parametrizado, carga de notas y actas
+// Enfoque: Desarrollo Basado en Metadatos — el código NO conoce
+// cuántas evaluaciones existen; todo se lee de esta configuración.
+// ══════════════════════════════════════════════════════════════
+
+model td_plan_evaluacion_jc {
+  id_plan_jc          Int      @id @default(autoincrement())
+  nombre_jc           String   @db.VarChar(150)
+  // Escala de la nota (ej. 20 puntos, 100 puntos) y mínima aprobatoria
+  notaMaxima_jc       Decimal  @default(20) @db.Decimal(5, 2)
+  notaAprobatoria_jc  Decimal  @default(10) @db.Decimal(5, 2)
+  // BORRADOR | PUBLICADO — solo los publicados rigen la carga de notas
+  estado_jc           String   @default("BORRADOR") @db.VarChar(20)
+  id_periodo_plan_jc  Int
+  // Si es null, el plan es institucional (aplica a todas las carreras del período)
+  id_carrera_plan_jc  Int?
+  creadoEn_jc         DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_jc    DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  periodo_jc  td_periodo_academico_cjgp @relation(fields: [id_periodo_plan_jc], references: [id_periodo_cjgp], onDelete: Cascade)
+  carrera_jc  td_carrera_cjgp?          @relation(fields: [id_carrera_plan_jc], references: [id_carrera_cjgp], onDelete: Cascade)
+  items_jc    td_item_evaluacion_jc[]
+
+  // Un solo plan por período/carrera para garantizar uniformidad en las actas
+  @@unique([id_periodo_plan_jc, id_carrera_plan_jc])
+}
+
+// Cada hito de evaluación configurable: "Corte 1", "Módulo A", "Reparación"...
+model td_item_evaluacion_jc {
+  id_item_jc      Int     @id @default(autoincrement())
+  nombre_jc       String  @db.VarChar(100)
+  orden_jc        Int
+  // Peso porcentual del ítem sobre la definitiva (los de recuperación no suman)
+  peso_jc         Decimal @db.Decimal(5, 2)
+  // true = condición especial tipo "Reparación": sustituye la definitiva reprobada
+  esRecuperacion_jc Boolean @default(false)
+  id_plan_item_jc Int
+
+  // Relaciones
+  plan_jc          td_plan_evaluacion_jc @relation(fields: [id_plan_item_jc], references: [id_plan_jc], onDelete: Cascade)
+  calificaciones_jc td_calificacion_jc[]
+
+  @@unique([id_plan_item_jc, orden_jc])
+}
+
+// Nota obtenida por un alumno en un ítem del plan de evaluación
+model td_calificacion_jc {
+  id_calificacion_jc            Int      @id @default(autoincrement())
+  valor_jc                      Decimal  @db.Decimal(5, 2)
+  id_inscripcion_materia_cal_jc Int
+  id_item_cal_jc                Int
+  cargadoPorUsuarioId_jc        Int?
+  creadoEn_jc                   DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_jc              DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inscripcionMateria_jc td_inscripcion_materia_cjgp @relation(fields: [id_inscripcion_materia_cal_jc], references: [id_inscripcion_materia_cjgp], onDelete: Cascade)
+  item_jc               td_item_evaluacion_jc       @relation(fields: [id_item_cal_jc], references: [id_item_jc], onDelete: Cascade)
+  cargadoPor_jc         td_usuario_ahbb?            @relation(fields: [cargadoPorUsuarioId_jc], references: [id_usuario_ahbb])
+
+  // Una sola nota por alumno-inscripción e ítem de evaluación
+  @@unique([id_inscripcion_materia_cal_jc, id_item_cal_jc])
+}
+
+// Registro de actas generadas: respaldo inalterable con hash de verificación
+model td_acta_jc {
+  id_acta_jc              Int      @id @default(autoincrement())
+  codigo_jc               String   @unique @db.VarChar(60)
+  // BLANCA (auditoría tabular) | VERDE (alta seguridad para llenado manual)
+  tipo_jc                 String   @db.VarChar(10)
+  // Hash SHA-256 del contenido: garantiza que el respaldo digital coincida con el físico
+  hashVerificacion_jc     String   @db.VarChar(64)
+  id_materia_acta_jc      Int
+  id_periodo_acta_jc      Int
+  generadaPorUsuarioId_jc Int
+  creadoEn_jc             DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  materia_jc     td_materia_cjgp           @relation(fields: [id_materia_acta_jc], references: [id_materia_cjgp], onDelete: Cascade)
+  periodo_jc     td_periodo_academico_cjgp @relation(fields: [id_periodo_acta_jc], references: [id_periodo_cjgp], onDelete: Cascade)
+  generadaPor_jc td_usuario_ahbb           @relation(fields: [generadaPorUsuarioId_jc], references: [id_usuario_ahbb])
 }

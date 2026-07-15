@@ -1,0 +1,6 @@
+periodo,carrera_codigo,plan,nota_maxima,nota_aprobatoria,evaluacion,orden,peso,es_recuperacion
+2026-II,ADM,Plan ADM 2026-II,20,10,Modulo A,1,25,NO
+2026-II,ADM,Plan ADM 2026-II,20,10,Modulo B,2,25,NO
+2026-II,ADM,Plan ADM 2026-II,20,10,Modulo C,3,25,NO
+2026-II,ADM,Plan ADM 2026-II,20,10,Modulo D,4,25,NO
+2026-II,ADM,Plan ADM 2026-II,20,10,Reparacion,5,0,SI

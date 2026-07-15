@@ -131,6 +131,88 @@ const routes = [
     meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
   },
 
+  // ─── Módulo Académico: Carreras y Pensums (_cjgp) ──────
+  {
+    path: '/admin/carreras',
+    name: 'adminCarreras',
+    component: () => import('pages/admin/CarrerasView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/carreras/asistente',
+    name: 'adminAsistenteCarrera',
+    component: () => import('pages/admin/AsistenteCarreraView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/periodos',
+    name: 'adminPeriodos',
+    component: () => import('pages/admin/PeriodosView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/inscripcion-alumnos',
+    name: 'adminInscripcionAlumnos',
+    component: () => import('pages/admin/InscripcionAlumnosAdminView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/profesor/mis-materias-carrera',
+    name: 'profesorMisMaterias',
+    component: () => import('pages/profesor/MisMateriasProfesorView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF] },
+  },
+  {
+    path: '/profesor/historial-materias',
+    name: 'profesorHistorialMaterias',
+    component: () => import('pages/profesor/HistorialMateriasProfesorView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF] },
+  },
+  {
+    path: '/alumno/inscripcion-materias',
+    name: 'alumnoInscripcionMaterias',
+    component: () => import('pages/alumno/InscripcionMateriasView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+  {
+    path: '/alumno/mis-materias',
+    name: 'alumnoMisMaterias',
+    component: () => import('pages/alumno/MisMateriasCarreraView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+  {
+    path: '/alumno/historial-carrera',
+    name: 'alumnoHistorialCarrera',
+    component: () => import('pages/alumno/HistorialCarreraView_cjgp.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+  {
+    path: '/alumno/mis-notas',
+    name: 'alumnoMisNotas',
+    component: () => import('pages/alumno/MisNotasView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+
+  // ─── Módulo Control de Estudios (_jc) ──────────────────
+  {
+    path: '/admin/planes-evaluacion',
+    name: 'adminPlanesEvaluacion',
+    component: () => import('pages/admin/PlanesEvaluacionView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/control-estudios',
+    name: 'adminControlEstudios',
+    component: () => import('pages/admin/ControlEstudiosAdminView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/control-estudios/carga-notas',
+    name: 'cargaNotas',
+    component: () => import('pages/profesor/CargaNotasView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, ADMIN] },
+  },
+
   // ─── Rutas exclusivas del profesor ─────────────────────
   {
     path: '/profesor/mis-alumnos',

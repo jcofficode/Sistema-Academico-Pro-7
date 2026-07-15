@@ -1,93 +1,124 @@
-# AcademiaSenpai
+# 🎓 AcademiaSenpai — Academia H&B
 
+Sistema integral de gestión académica: cursos certificados, **carreras con
+pensum y prelaciones**, **inscripción inteligente por créditos**, **control de
+estudios con planes de evaluación parametrizados y actas de seguridad**, tienda
+oficial y certificados verificables con QR.
 
+> Proyecto universitario. Sistema base (`_ahbb`) extendido este semestre con el
+> **Módulo Académico de Carreras** (`_cjgp` — Coffi, Jorge, Guillermo y Padrino)
+> y el **Módulo de Control de Estudios** (`_jc`).
+> La explicación técnica detallada de la ampliación está en
+> [`READMEEXPLICACION.md`](./READMEEXPLICACION.md).
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 🧱 Arquitectura
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+| Capa | Tecnología |
+|---|---|
+| **Frontend (SPA)** | Vue 3 + Quasar 2 (Composition API), Axios, Pinia, Vue Router |
+| **Backend (API REST)** | NestJS 11 (TypeScript), JWT, class-validator, pdfmake, xlsx |
+| **Base de datos** | PostgreSQL + Prisma ORM (migraciones versionadas, stored procedures, triggers y tablas temporales) |
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/Senpai15/academiasenpai.git
-git branch -M main
-git push -uf origin main
+frontend (Quasar :9000)  ── Axios/JSON ──►  backend (NestJS :3000/api)  ── Prisma ──►  PostgreSQL
 ```
 
-## Integrate with your tools
+## ✨ Módulos principales
 
-* [Set up project integrations](https://gitlab.com/Senpai15/academiasenpai/-/settings/integrations)
+- **Gestión de usuarios** con roles (Administrador, Profesor, Alumno) y aprobación de cuentas.
+- **Cursos certificados**: horarios, sesiones, inscripciones y certificados PDF con QR verificable.
+- **Carreras y Pensums** *(nuevo)*: asistente paso a paso, carga masiva del pensum por Excel, prelaciones visuales.
+- **Motor de Reglas Académicas** *(nuevo)*: bloqueo por prelaciones y control del límite de créditos por período.
+- **Inscripción de materias** *(nuevo)*: vitrina clara, calculadora de créditos en vivo y mensajes empáticos.
+- **Control de Estudios** *(nuevo)*: planes de evaluación configurables por período, carga de notas con columnas dinámicas, ETL/CSV con validación en dos fases, actas PDF (blanca de auditoría y verde de seguridad con hash SHA-256) y reportes con tablas temporales.
+- **Tienda oficial** (e-commerce) con carrito, favoritos y facturación.
 
-## Collaborate with your team
+## 🚀 Puesta en marcha
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Requisitos
 
-## Test and Deploy
+- Node.js ≥ 22 · npm ≥ 10
+- PostgreSQL ≥ 14 corriendo en local
 
-Use the built-in continuous integration in GitLab.
+### 1. Backend
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+cd backend
+npm install
+```
 
-***
+Crear `backend/.env`:
 
-# Editing this README
+```env
+DATABASE_URL="postgresql://postgres:TU_CLAVE@localhost:5432/academiasenpai_ahbb?schema=public"
+PORT=3000
+MAIL_USER=        # opcional (envío de correos)
+MAIL_PASS=        # opcional
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+npm run start:dev
+```
 
-## Suggestions for a good README
+El arranque es autosuficiente: crea la base de datos si no existe, aplica las
+migraciones, genera el cliente Prisma, instala el stored procedure y siembra
+los usuarios base. Al final verás `Nest application successfully started`.
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+**Datos académicos de demostración** (carrera INF con profesores asignados,
+períodos, plan de evaluación, inscripciones y notas):
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+npm run seed:academico     # siembra sin borrar nada
+npm run reset:academico    # ⭐ reinicia el módulo académico al estado limpio
+                           #    de la ruta de prueba (no toca usuarios/cursos/tienda)
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### 2. Frontend
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```bash
+cd frontend
+npm install
+npm run dev        # abre http://localhost:9000
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### 3. Credenciales de demostración
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+| Rol | Correo | Contraseña |
+|---|---|---|
+| Administrador | `admin@academiah-b.edu` | `admin123` |
+| Profesor | `carlos@academiah-b.edu` | `prof123` |
+| Alumna | `maria@estudiante.edu` | `alum123` |
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## 🔐 Seguridad
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+- **JWT** en todas las rutas privadas + **guards de roles** por endpoint.
+- **DTOs con class-validator** y `ValidationPipe` global (previene datos maliciosos).
+- **CORS** restringido a los orígenes del frontend.
+- **Constraints** de integridad en PostgreSQL + transacciones Prisma.
+- Actas con **hash SHA-256** registrado (respaldo digital inalterable).
+- Credenciales solo en `.env` (nunca en el código).
+- **Despliegue recomendado**: NestJS detrás de un **proxy inverso Nginx** que
+  termine SSL (HTTPS) y mitigue ataques DoS básicos; el puerto 3000 no se
+  expone directamente a Internet.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## 📂 Estructura del repositorio
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```
+backend/
+  prisma/               # schema + migraciones versionadas
+  scripts/              # init BD, seeds, stored procedures
+  src/
+    academico/          # ★ Carreras, períodos, motor de reglas, inscripción (_cjgp)
+    control-estudios/   # ★ Planes, notas, ETL/CSV, actas PDF, reportes (_jc)
+    auth/ usuarios/ cursos/ inscripciones/ certificados/ tienda/ ...
+frontend/
+  public/plantillas/    # ★ CSV de ejemplo para la carga masiva
+  src/
+    pages/admin|alumno|profesor/   # ★ vistas nuevas _cjgp / _jc
+    servicios/          # capa Axios por módulo
+READMEEXPLICACION.md    # ★ documento técnico de la ampliación (flujo + DER)
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+★ = incorporado en la ampliación de este semestre.

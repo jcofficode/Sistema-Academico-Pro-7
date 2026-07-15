@@ -1,1 +1,0 @@
-import{S as e}from"./runtime-core.esm-bundler-DeSBoGAl.js";function t(){return e(`_q_`)}export{t};

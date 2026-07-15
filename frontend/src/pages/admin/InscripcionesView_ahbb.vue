@@ -8,8 +8,57 @@ import {
   aprobarAlumno_ahbb,
   aprobarAlumnosMasivo_ahbb,
 } from '../../servicios/usuariosServicio_ahbb';
+import { obtenerCursos_ahbb } from '../../servicios/cursosServicio_ahbb';
+import { crearInscripcion_ahbb } from '../../servicios/inscripcionesServicio_ahbb';
 
 const $q = useQuasar();
+
+// ── Inscripción de un alumno en un curso extracurricular (por el admin) ──
+const dialogoInscribirCurso_ahbb = ref(false);
+const cursosDisponibles_ahbb = ref([]);
+const alumnoParaCurso_ahbb = ref(null);
+const cursoParaInscribir_ahbb = ref(null);
+const inscribiendoCurso_ahbb = ref(false);
+
+const abrirInscribirCurso_ahbb = async () => {
+  dialogoInscribirCurso_ahbb.value = true;
+  alumnoParaCurso_ahbb.value = null;
+  cursoParaInscribir_ahbb.value = null;
+  if (!cursosDisponibles_ahbb.value.length) {
+    try {
+      const cursos_ahbb = await obtenerCursos_ahbb();
+      // Solo cursos publicados admiten inscripciones
+      cursosDisponibles_ahbb.value = (cursos_ahbb ?? []).filter(
+        (curso_ahbb) => curso_ahbb.isPublished_ahbb ?? curso_ahbb.publicado ?? true,
+      );
+    } catch {
+      $q.notify({ type: 'negative', message: 'No se pudieron cargar los cursos.' });
+    }
+  }
+};
+
+const inscribirEnCurso_ahbb = async () => {
+  if (!alumnoParaCurso_ahbb.value || !cursoParaInscribir_ahbb.value) {
+    $q.notify({ type: 'warning', message: 'Selecciona el alumno y el curso.' });
+    return;
+  }
+  inscribiendoCurso_ahbb.value = true;
+  const resultado_ahbb = await crearInscripcion_ahbb({
+    alumnoId: alumnoParaCurso_ahbb.value.id,
+    cursoId:
+      cursoParaInscribir_ahbb.value.id_curso_ahbb ?? cursoParaInscribir_ahbb.value.id,
+  });
+  inscribiendoCurso_ahbb.value = false;
+
+  $q.notify({
+    type: resultado_ahbb.exito ? 'positive' : 'negative',
+    message: resultado_ahbb.exito
+      ? `✅ ${alumnoParaCurso_ahbb.value.nombre} inscrito en el curso correctamente.`
+      : resultado_ahbb.mensaje,
+    timeout: 5000,
+  });
+  if (resultado_ahbb.exito) dialogoInscribirCurso_ahbb.value = false;
+};
 
 const alumnos_ahbb = ref([]);
 const cargando_ahbb = ref(true);
@@ -190,6 +239,13 @@ onMounted(cargarAlumnos_ahbb);
       <!-- Acciones masivas -->
       <div class="row q-gutter-sm">
         <q-btn
+          unelevated
+          color="secondary"
+          icon="person_add"
+          label="Inscribir alumno en curso"
+          @click="abrirInscribirCurso_ahbb"
+        />
+        <q-btn
           v-if="pendientesSeleccionados_ahbb.length > 0"
           unelevated
           color="positive"
@@ -335,5 +391,46 @@ onMounted(cargarAlumnos_ahbb);
         </template>
       </q-table>
     </q-card>
+
+    <!-- Diálogo: el admin inscribe un alumno en un curso extracurricular -->
+    <q-dialog v-model="dialogoInscribirCurso_ahbb">
+      <q-card style="min-width: 420px">
+        <q-card-section class="row items-center q-pb-none">
+          <q-avatar icon="person_add" color="blue-1" text-color="primary" />
+          <div class="text-h6 q-ml-sm">Inscribir alumno en curso</div>
+        </q-card-section>
+        <q-card-section class="q-gutter-sm">
+          <q-select
+            v-model="alumnoParaCurso_ahbb"
+            :options="alumnos_ahbb.filter((a) => a.estadoCuenta === 'ACTIVO')"
+            :option-label="(alumno) => `${alumno.nombre} ${alumno.apellido} (${alumno.cedula})`"
+            label="Alumno (solo cuentas activas)"
+            outlined
+            dense
+          />
+          <q-select
+            v-model="cursoParaInscribir_ahbb"
+            :options="cursosDisponibles_ahbb"
+            :option-label="(curso) => curso.nombre_ahbb ?? curso.nombre"
+            label="Curso publicado"
+            outlined
+            dense
+          />
+          <div class="text-caption text-grey-7">
+            El servidor valida cupo y duplicados igual que si se inscribiera el propio alumno.
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" v-close-popup />
+          <q-btn
+            color="positive"
+            icon="how_to_reg"
+            label="Inscribir"
+            :loading="inscribiendoCurso_ahbb"
+            @click="inscribirEnCurso_ahbb"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>

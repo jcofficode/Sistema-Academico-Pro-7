@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { join } from 'path';
 import * as express from 'express';
 import { AppModule } from './app.module';
@@ -45,6 +46,16 @@ async function bootstrap() {
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   app.setGlobalPrefix('api');
+
+  // Validación de datos con class-validator (DTOs): previene inyecciones
+  // de datos maliciosos transformando y validando cada petición entrante.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
   app.useGlobalFilters(new HttpExceptionFilter_ahbb());
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 

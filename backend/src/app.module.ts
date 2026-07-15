@@ -12,9 +12,11 @@ import { BootstrapService_ahbb } from './bootstrap/bootstrap.service_ahbb';
 import { TunnelModule_ahbb } from './common/tunnel/tunnel.module_ahbb';
 import { CertificadosModule_ahbb } from './certificados/certificados.module_ahbb';
 import { ConfiguracionModule_ahbb } from './configuracion/configuracion.module_ahbb';
+import { AcademicoModule_cjgp } from './academico/academico.module_cjgp';
+import { ControlEstudiosModule_jc } from './control-estudios/control-estudios.module_jc';
 
 @Module({
-  imports: [UsuariosModule, AuthModule, CursosModule, InscripcionesModule_ahbb, TiendaModule_ahbb, DashboardModule, TunnelModule_ahbb, CertificadosModule_ahbb, ConfiguracionModule_ahbb],
+  imports: [UsuariosModule, AuthModule, CursosModule, InscripcionesModule_ahbb, TiendaModule_ahbb, DashboardModule, TunnelModule_ahbb, CertificadosModule_ahbb, ConfiguracionModule_ahbb, AcademicoModule_cjgp, ControlEstudiosModule_jc],
   controllers: [AppController],
   providers: [AppService, PrismaService, BootstrapService_ahbb],
 })

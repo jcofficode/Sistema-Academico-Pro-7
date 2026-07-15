@@ -51,20 +51,55 @@ export class DashboardService {
 
     if (rol_ahbb === 'ALUMNO') {
       const cursosInscritos = await this.prisma_ahbb.td_inscripcion_ahbb.count({
-        where: { 
+        where: {
           id_usuario_inscripcion_ahbb: userId_ahbb,
           estatus_ahbb: { in: ['INSCRITO', 'OYENTE', 'APROBADO'] }
         },
       });
-      
+
       const certificadosCount = await this.prisma_ahbb.td_inscripcion_ahbb.count({
-         where: { 
+         where: {
            id_usuario_inscripcion_ahbb: userId_ahbb,
            certificado: { isNot: null }
          }
       });
 
-      return { cursosInscritos, certificados: certificadosCount };
+      // ── Módulo de Carreras (_cjgp): carreras del alumno y materias en curso ──
+      const inscripcionesMaterias_cjgp =
+        await this.prisma_ahbb.td_inscripcion_materia_cjgp.findMany({
+          where: { id_usuario_im_cjgp: userId_ahbb, estatus_cjgp: { not: 'RETIRADO' } },
+          include: {
+            materia_cjgp: {
+              include: { carrera_cjgp: { select: { nombre_cjgp: true, codigo_cjgp: true } } },
+            },
+          },
+        });
+
+      // Carreras distintas en las que el alumno tiene historial
+      const carrerasMapa_cjgp = new Map<string, string>();
+      for (const inscripcion_cjgp of inscripcionesMaterias_cjgp) {
+        carrerasMapa_cjgp.set(
+          inscripcion_cjgp.materia_cjgp.carrera_cjgp.codigo_cjgp,
+          inscripcion_cjgp.materia_cjgp.carrera_cjgp.nombre_cjgp,
+        );
+      }
+
+      const materiasEnCurso_cjgp = inscripcionesMaterias_cjgp.filter(
+        (inscripcion_cjgp) => inscripcion_cjgp.estatus_cjgp === 'INSCRITO',
+      ).length;
+      const materiasAprobadas_cjgp = inscripcionesMaterias_cjgp.filter(
+        (inscripcion_cjgp) => inscripcion_cjgp.estatus_cjgp === 'APROBADO',
+      ).length;
+
+      return {
+        cursosInscritos,
+        certificados: certificadosCount,
+        carrerasAlumno: [...carrerasMapa_cjgp.values()],
+        totalCarreras: carrerasMapa_cjgp.size,
+        materiasEnCurso: materiasEnCurso_cjgp,
+        materiasAprobadas: materiasAprobadas_cjgp,
+        totalMateriasInscritas: inscripcionesMaterias_cjgp.length,
+      };
     }
 
     return {};

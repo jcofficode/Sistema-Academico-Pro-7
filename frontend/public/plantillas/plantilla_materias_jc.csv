@@ -1,0 +1,7 @@
+carrera_codigo,codigo,nombre,creditos,bloque,prelaciones
+ADM,ADM101,Introduccion a la Administracion,4,1,
+ADM,MAT101,Matematica Basica,4,1,
+ADM,ADM201,Teoria Organizacional,4,2,ADM101
+ADM,EST201,Estadistica Aplicada,4,2,MAT101
+ADM,ADM301,Gerencia Estrategica,5,3,ADM201
+ADM,FIN301,Finanzas Corporativas,5,3,EST201;ADM201
