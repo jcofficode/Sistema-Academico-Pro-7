@@ -14,11 +14,14 @@ export class JwtAuthGuard_ahbb implements CanActivate {
     const request_ahbb = context_ahbb.switchToHttp().getRequest();
     const authorization_ahbb = request_ahbb.headers.authorization;
 
-    if (!authorization_ahbb?.startsWith('Bearer ')) {
+    let token_ahbb = '';
+    if (authorization_ahbb?.startsWith('Bearer ')) {
+      token_ahbb = authorization_ahbb.replace('Bearer ', '').trim();
+    } else if (request_ahbb.query?.token) {
+      token_ahbb = String(request_ahbb.query.token);
+    } else {
       throw new UnauthorizedException('Token JWT requerido.');
     }
-
-    const token_ahbb = authorization_ahbb.replace('Bearer ', '').trim();
 
     try {
       const payload_ahbb = await this.jwtService_ahbb.verifyAsync(token_ahbb);

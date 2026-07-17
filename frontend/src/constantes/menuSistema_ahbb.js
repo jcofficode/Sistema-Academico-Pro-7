@@ -58,6 +58,9 @@ const MENU_PROFESOR_AHBB = [
   { icono: 'draw', etiqueta: 'Mi Firma Digital', ruta: '/profesor/firma-digital' },
   { icono: 'image', etiqueta: 'Plantilla Certificado', ruta: '/plantillas-certificados' },
   { icono: 'store', etiqueta: 'Tienda Oficial', ruta: '/tienda', encabezado: 'E-Commerce', separador: true },
+
+  // ─── Aula Virtual (RP) ───
+  { icono: 'ondemand_video', etiqueta: 'Cursos Multimedia', ruta: '/profesor/cursos-multimedia', encabezado: 'Aula Virtual (RP)', separador: true },
 ];
 
 /** Menú del Alumno */
@@ -78,6 +81,9 @@ const MENU_ALUMNO_AHBB = [
 
   { icono: 'workspace_premium', etiqueta: 'Mis Certificados', ruta: '/alumno/mis-certificados', encabezado: 'Certificación', separador: true },
   { icono: 'store', etiqueta: 'Tienda Oficial', ruta: '/tienda', encabezado: 'E-Commerce', separador: true },
+
+  // ─── Aula Virtual (RP) ───
+  { icono: 'school', etiqueta: 'Mi Aula Virtual', ruta: '/alumno/aula-virtual', encabezado: 'Aula Virtual (RP)', separador: true },
 ];
 
 /**

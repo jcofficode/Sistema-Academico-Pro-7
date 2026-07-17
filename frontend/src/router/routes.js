@@ -305,6 +305,38 @@ const routes = [
     meta: { publica_ahbb: true, layout_ahbb: 'landing' },
   },
 
+  // ─── Módulo Multimedia y Videollamadas (_jf) ───────────
+  {
+    path: '/profesor/cursos-multimedia',
+    name: 'profesorCursosMultimedia',
+    component: () => import('pages/profesor/CursosMultimediaView_jf.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, ADMIN] },
+  },
+  {
+    path: '/profesor/multimedia/constructor/:id',
+    name: 'profesorConstructorCurso',
+    component: () => import('pages/profesor/ConstructorCursoView_jf.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, ADMIN] },
+  },
+  {
+    path: '/alumno/aula-virtual',
+    name: 'alumnoAulaVirtual',
+    component: () => import('pages/alumno/AulaVirtualView_jf.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+  {
+    path: '/alumno/aula-virtual/player/:id',
+    name: 'alumnoPlayerCurso',
+    component: () => import('pages/alumno/PlayerCursoView_jf.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+  {
+    path: '/aula-virtual/videollamada/:id',
+    name: 'aulaVirtualVideollamada',
+    component: () => import('pages/compartidas/SalaVideollamadaView_jf.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: TODOS },
+  },
+
   // Catch-all
   {
     path: '/:catchAll(.*)*',

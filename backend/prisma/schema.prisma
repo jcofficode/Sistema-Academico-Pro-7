@@ -42,6 +42,11 @@ model td_usuario_ahbb {
   materiasDictadas_cjgp      td_materia_cjgp[] @relation("ProfesorMateria")
   calificacionesCargadas_jc  td_calificacion_jc[]
   actasGeneradas_jc          td_acta_jc[]
+
+  // Relaciones Módulo Multimedia y Videollamadas (_jf)
+  progresosMultimedia_jf     td_progreso_lecciones_jf[]
+  intentosMultimedia_jf      td_intento_evaluacion_jf[]
+  salasCreadas_jf            td_salas_videollamadas_jf[]
 }
 
 model td_curso_ahbb {
@@ -74,6 +79,10 @@ model td_curso_ahbb {
   horarios      td_horario_ahbb[]
   inscripciones td_inscripcion_ahbb[]
   sesiones      td_sesion_curso_ahbb[]
+
+  // Relaciones Módulo Multimedia y Videollamadas (_jf)
+  bloques_jf    td_bloques_jf[]
+  salas_jf      td_salas_videollamadas_jf[]
 }
 
 model td_sesion_curso_ahbb {
@@ -115,6 +124,10 @@ model td_inscripcion_ahbb {
   alumno                      td_usuario_ahbb @relation(fields: [id_usuario_inscripcion_ahbb], references: [id_usuario_ahbb], onDelete: Cascade)
   curso                       td_curso_ahbb   @relation(fields: [id_curso_inscripcion_ahbb], references: [id_curso_ahbb], onDelete: Cascade)
   certificado                 td_certificado_ahbb?
+
+  // Relaciones Módulo Multimedia y Videollamadas (_jf)
+  progresosMultimedia_jf      td_progreso_lecciones_jf[]
+  intentosMultimedia_jf       td_intento_evaluacion_jf[]
 
   // @@unique removed: allows re-enrollment when student was REPROBADO
   @@index([id_usuario_inscripcion_ahbb, id_curso_inscripcion_ahbb])
@@ -416,4 +429,118 @@ model td_acta_jc {
   materia_jc     td_materia_cjgp           @relation(fields: [id_materia_acta_jc], references: [id_materia_cjgp], onDelete: Cascade)
   periodo_jc     td_periodo_academico_cjgp @relation(fields: [id_periodo_acta_jc], references: [id_periodo_cjgp], onDelete: Cascade)
   generadaPor_jc td_usuario_ahbb           @relation(fields: [generadaPorUsuarioId_jc], references: [id_usuario_ahbb])
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO MULTIMEDIA Y VIDEOLLAMADAS (_jf)
+// ══════════════════════════════════════════════════════════════
+
+model td_bloques_jf {
+  id_bloque_jf       Int      @id @default(autoincrement())
+  id_curso_bloque_jf Int
+  nombre_jf          String   @db.VarChar(200)
+  descripcion_jf     String?  @db.Text
+  orden_jf           Int
+  creadoEn_jf        DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_jf   DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  curso_jf           td_curso_ahbb    @relation(fields: [id_curso_bloque_jf], references: [id_curso_ahbb], onDelete: Cascade)
+  lecciones_jf       td_lecciones_jf[]
+  evaluacion_jf      td_evaluaciones_jf?
+}
+
+model td_lecciones_jf {
+  id_leccion_jf        Int      @id @default(autoincrement())
+  id_bloque_leccion_jf Int
+  titulo_jf            String   @db.VarChar(200)
+  descripcion_jf       String?  @db.Text
+  orden_jf             Int
+  tipo_jf              String   @db.VarChar(20) // VIDEO | LECTURA | RECURSO
+  urlArchivo_jf        String?  @db.Text
+  contenidoTexto_jf    String?  @db.Text
+  creadoEn_jf          DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_jf     DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  bloque_jf            td_bloques_jf    @relation(fields: [id_bloque_leccion_jf], references: [id_bloque_jf], onDelete: Cascade)
+  progresos_jf         td_progreso_lecciones_jf[]
+}
+
+model td_progreso_lecciones_jf {
+  id_progreso_jf             Int      @id @default(autoincrement())
+  id_inscripcion_progreso_jf Int
+  id_leccion_progreso_jf     Int
+  id_usuario_alumno_jf       Int
+  completada_jf              Boolean  @default(false)
+  porcentajeVisto_jf         Decimal? @db.Decimal(5, 2)
+  actualizadoEn_jf           DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inscripcion_jf             td_inscripcion_ahbb @relation(fields: [id_inscripcion_progreso_jf], references: [id_inscripcion_ahbb], onDelete: Cascade)
+  leccion_jf                 td_lecciones_jf     @relation(fields: [id_leccion_progreso_jf], references: [id_leccion_jf], onDelete: Cascade)
+  alumno_jf                  td_usuario_ahbb     @relation(fields: [id_usuario_alumno_jf], references: [id_usuario_ahbb], onDelete: Cascade)
+
+  @@unique([id_inscripcion_progreso_jf, id_leccion_progreso_jf])
+}
+
+model td_evaluaciones_jf {
+  id_evaluacion_jf        Int      @id @default(autoincrement())
+  id_bloque_evaluacion_jf Int      @unique
+  titulo_jf               String   @db.VarChar(200)
+  descripcion_jf          String?  @db.Text
+  notaMinima_jf           Decimal  @db.Decimal(5, 2)
+  intentosMaximos_jf      Int      @default(3)
+  preguntasJson_jf        Json
+  creadoEn_jf             DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_jf        DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  bloque_jf               td_bloques_jf @relation(fields: [id_bloque_evaluacion_jf], references: [id_bloque_jf], onDelete: Cascade)
+  intentos_jf             td_intento_evaluacion_jf[]
+}
+
+model td_intento_evaluacion_jf {
+  id_intento_jf             Int      @id @default(autoincrement())
+  id_evaluacion_intento_jf  Int
+  id_inscripcion_intento_jf Int
+  id_usuario_alumno_jf      Int
+  notaObtenida_jf           Decimal  @db.Decimal(5, 2)
+  aprobado_jf               Boolean  @default(false)
+  respuestasAlumnoJson_jf   Json
+  fechaIntento_jf           DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  evaluacion_jf             td_evaluaciones_jf  @relation(fields: [id_evaluacion_intento_jf], references: [id_evaluacion_jf], onDelete: Cascade)
+  inscripcion_jf            td_inscripcion_ahbb @relation(fields: [id_inscripcion_intento_jf], references: [id_inscripcion_ahbb], onDelete: Cascade)
+  alumno_jf                 td_usuario_ahbb     @relation(fields: [id_usuario_alumno_jf], references: [id_usuario_ahbb], onDelete: Cascade)
+}
+
+model td_salas_videollamadas_jf {
+  id_sala_jf           Int      @id @default(autoincrement())
+  id_curso_sala_jf     Int
+  id_usuario_creador_jf Int
+  nombreSala_jf        String   @db.VarChar(100)
+  titulo_jf            String   @db.VarChar(200)
+  estado_jf            String   @default("PROGRAMADA") @db.VarChar(20)
+  fechaProgramada_jf   DateTime @db.Timestamp(6)
+  fechaInicioReal_jf   DateTime? @db.Timestamp(6)
+  fechaFinReal_jf      DateTime? @db.Timestamp(6)
+  duracionSegundos_jf  Int?     @default(0)
+  creadoEn_jf          DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  curso_jf             td_curso_ahbb   @relation(fields: [id_curso_sala_jf], references: [id_curso_ahbb], onDelete: Cascade)
+  creador_jf           td_usuario_ahbb @relation(fields: [id_usuario_creador_jf], references: [id_usuario_ahbb], onDelete: Cascade)
+}
+
+model td_auditoria_multimedia_jf {
+  id_auditoria_jf      Int      @id @default(autoincrement())
+  tabla_jf             String   @db.VarChar(50)
+  operacion_jf         String   @db.VarChar(20)
+  registro_id_jf       Int
+  datos_anteriores_jf  Json?
+  datos_nuevos_jf      Json?
+  usuario_jf           String?  @db.VarChar(100)
+  fecha_jf             DateTime @default(now()) @db.Timestamp(6)
 }
