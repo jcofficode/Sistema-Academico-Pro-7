@@ -7,6 +7,7 @@ import { PeriodosService_cjgp } from './periodos.service_cjgp';
 import { MotorReglasService_cjgp } from './motor-reglas.service_cjgp';
 import { InscripcionMateriasController_cjgp } from './inscripcion-materias.controller_cjgp';
 import { InscripcionMateriasService_cjgp } from './inscripcion-materias.service_cjgp';
+import { PagosModule_ap } from '../pagos/pagos.module_ap';
 
 /**
  * AcademicoModule_cjgp — Trabajo grupal (Coffi, Jorge, Guillermo, Padrino).
@@ -14,8 +15,12 @@ import { InscripcionMateriasService_cjgp } from './inscripcion-materias.service_
  * Épica 1: Creación ágil de carreras y pensums (asistente + Excel + prelaciones).
  * Épica 2: Motor de Reglas Académicas ("El Guardián").
  * Épica 3: Inscripción sin fricción para el estudiante (vitrina + auditoría).
+ *
+ * Importa PagosModule_ap para que InscripcionMateriasService_cjgp pueda
+ * verificar la solvencia del alumno antes de procesar la inscripción.
  */
 @Module({
+  imports: [PagosModule_ap],
   controllers: [
     CarrerasController_cjgp,
     PeriodosController_cjgp,

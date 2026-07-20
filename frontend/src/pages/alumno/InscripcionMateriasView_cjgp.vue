@@ -204,6 +204,34 @@ onMounted(async () => {
         </div>
       </q-card>
 
+      <!-- Banner de morosidad / falta de pago (_ap) -->
+      <q-banner
+        v-if="!vitrina_cjgp.solvente_ap"
+        rounded
+        class="bg-deep-orange-1 text-deep-orange-9 q-mb-md"
+        style="border: 1px solid #ffab91"
+      >
+        <template #avatar>
+          <q-icon name="warning" size="32px" color="deep-orange" />
+        </template>
+        <div class="text-weight-bold text-subtitle1">
+          Debes cancelar el arancel del período para poder inscribirte
+        </div>
+        <div>
+          No registras un pago confirmado para el período {{ vitrina_cjgp.periodo.nombre_cjgp }}.
+          Por favor, realiza tu pago para poder continuar con la inscripción de tus materias.
+        </div>
+        <template #action>
+          <q-btn
+            id="btn-ir-a-pagos-vitrina"
+            flat
+            color="deep-orange"
+            label="Ir a Mis Pagos"
+            to="/alumno/mis-pagos"
+          />
+        </template>
+      </q-banner>
+
       <!-- Calculadora reactiva de créditos (sticky) -->
       <q-card flat bordered class="q-pa-md q-mb-md bg-blue-grey-1 calculadora-fija_cjgp">
         <div class="row items-center q-col-gutter-md">
@@ -228,13 +256,14 @@ onMounted(async () => {
               color="positive"
               icon="how_to_reg"
               :label="`Inscribir ${seleccionadas_cjgp.length} materia(s)`"
-              :disable="!seleccionadas_cjgp.length"
+              :disable="!seleccionadas_cjgp.length || !vitrina_cjgp.solvente_ap"
               :loading="inscribiendo_cjgp"
               @click="confirmarInscripcion_cjgp"
             />
           </div>
         </div>
       </q-card>
+
 
       <!-- Leyenda -->
       <div class="row q-gutter-sm q-mb-md text-caption items-center">

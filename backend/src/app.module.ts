@@ -15,6 +15,7 @@ import { ConfiguracionModule_ahbb } from './configuracion/configuracion.module_a
 import { AcademicoModule_cjgp } from './academico/academico.module_cjgp';
 import { ControlEstudiosModule_jc } from './control-estudios/control-estudios.module_jc';
 import { MultimediaModule_jf } from './multimedia/multimedia.module_jf';
+import { PagosModule_ap } from './pagos/pagos.module_ap';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MultimediaModule_jf } from './multimedia/multimedia.module_jf';
     AcademicoModule_cjgp,
     ControlEstudiosModule_jc,
     MultimediaModule_jf,
+    PagosModule_ap,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, BootstrapService_ahbb],

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { MotorReglasService_cjgp } from './motor-reglas.service_cjgp';
+import { PagosService_ap } from '../pagos/pagos.service_ap';
 
 /**
  * InscripcionMateriasService_cjgp — Épica 3: Inscripción sin Fricción.
@@ -18,6 +19,7 @@ export class InscripcionMateriasService_cjgp {
   constructor(
     private readonly prisma_cjgp: PrismaService,
     private readonly motorReglas_cjgp: MotorReglasService_cjgp,
+    private readonly pagosService_ap: PagosService_ap,
   ) {}
 
   /** Período activo o error claro si la coordinación aún no abrió uno. */
@@ -76,6 +78,14 @@ export class InscripcionMateriasService_cjgp {
       }),
     ).filter((bloque_cjgp) => bloque_cjgp.materias_cjgp.length > 0);
 
+    // Verificar si el alumno es solvente para el período activo
+    let solvente_ap = true;
+    try {
+      await this.pagosService_ap.verificarSolvencia_ap(id_usuario_cjgp, periodo_cjgp.id_periodo_cjgp);
+    } catch (e) {
+      solvente_ap = false;
+    }
+
     return {
       carrera: {
         id_carrera_cjgp: carrera_cjgp.id_carrera_cjgp,
@@ -86,6 +96,7 @@ export class InscripcionMateriasService_cjgp {
       periodo: periodo_cjgp,
       creditosInscritos_cjgp,
       bloques_cjgp,
+      solvente_ap,
     };
   }
 
@@ -109,6 +120,11 @@ export class InscripcionMateriasService_cjgp {
         'El período indicado no está activo para inscripciones.',
       );
     }
+
+    // ── REGLA DE NEGOCIO CENTRAL (_ap): verificar solvencia del alumno ──
+    // El alumno debe tener un pago CONFIRMADO del período activo.
+    // Si no, se devuelve un error empático con violaciones claras.
+    await this.pagosService_ap.verificarSolvencia_ap(id_usuario_cjgp, id_periodo_cjgp);
 
     const auditoria_cjgp = await this.motorReglas_cjgp.auditarInscripcion_cjgp(
       id_usuario_cjgp,

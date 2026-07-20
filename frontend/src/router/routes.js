@@ -337,6 +337,50 @@ const routes = [
     meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: TODOS },
   },
 
+  // ─── Módulo de Pagos (_ap) ───────────────────────────
+  {
+    path: '/admin/pagos/tarifas',
+    name: 'adminTarifas_ap',
+    component: () => import('pages/admin/TarifasView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/pagos/confirmar',
+    name: 'adminConfirmarPagos_ap',
+    component: () => import('pages/admin/ConfirmarPagosView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/pagos/contratos',
+    name: 'adminContratos_ap',
+    component: () => import('pages/admin/ContratosView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/pagos/nomina',
+    name: 'adminNomina_ap',
+    component: () => import('pages/admin/NominaView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/alumno/mis-pagos',
+    name: 'alumnoMisPagos_ap',
+    component: () => import('pages/alumno/MisPagosView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+  {
+    path: '/profesor/pagos/mi-contrato',
+    name: 'profesorMiContrato_ap',
+    component: () => import('pages/profesor/MisRecibosView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF] },
+  },
+  {
+    path: '/profesor/pagos/mis-recibos',
+    name: 'profesorMisRecibos_ap',
+    component: () => import('pages/profesor/MisRecibosView_ap.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF] },
+  },
+
   // Catch-all
   {
     path: '/:catchAll(.*)*',

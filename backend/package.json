@@ -13,6 +13,8 @@
     "cursosFinalizados": "node scripts/cursos-finalizados_ahbb.cjs",
     "seed:academico": "node scripts/seed-academico_cjgp.cjs",
     "reset:academico": "node scripts/seed-academico_cjgp.cjs --reset",
+    "seed:pagos": "node scripts/seed-pagos_ap.cjs",
+    "reset:pagos": "node scripts/seed-pagos_ap.cjs --reset",
     "copy:prisma": "node -e \"const fs=require('fs');fs.mkdirSync('dist/src/generated',{recursive:true});fs.cpSync('src/generated','dist/src/generated',{recursive:true,force:true});\"",
     "db:prepare": "npm run db:init && npm run db:migrate && prisma generate && npm run copy:prisma && node scripts/create-sp_ahbb.cjs",
     "prestart": "npm run db:prepare",

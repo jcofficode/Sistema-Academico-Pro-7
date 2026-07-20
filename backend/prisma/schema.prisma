@@ -47,6 +47,11 @@ model td_usuario_ahbb {
   progresosMultimedia_jf     td_progreso_lecciones_jf[]
   intentosMultimedia_jf      td_intento_evaluacion_jf[]
   salasCreadas_jf            td_salas_videollamadas_jf[]
+
+  // Relaciones Módulo de Pagos (_ap)
+  pagos_ap                   td_pago_ap[]            @relation("AlumnoPago")
+  pagosConfirmados_ap        td_pago_ap[]            @relation("ConfirmadorPago")
+  contrato_ap                td_contrato_profesor_ap? @relation("ProfesorContrato")
 }
 
 model td_curso_ahbb {
@@ -83,6 +88,10 @@ model td_curso_ahbb {
   // Relaciones Módulo Multimedia y Videollamadas (_jf)
   bloques_jf    td_bloques_jf[]
   salas_jf      td_salas_videollamadas_jf[]
+
+  // Relaciones Módulo de Pagos (_ap)
+  tarifas_ap    td_tarifa_ap[]
+  pagos_ap      td_pago_ap[]
 }
 
 model td_sesion_curso_ahbb {
@@ -320,6 +329,10 @@ model td_periodo_academico_cjgp {
   inscripciones_cjgp    td_inscripcion_materia_cjgp[]
   planesEvaluacion_jc   td_plan_evaluacion_jc[]
   actas_jc              td_acta_jc[]
+
+  // Relaciones Módulo de Pagos (_ap)
+  pagos_ap              td_pago_ap[]
+  nominas_ap            td_nomina_ap[]
 }
 
 // Historial académico del alumno por materia y período (Épica 2 y 3)
@@ -543,4 +556,114 @@ model td_auditoria_multimedia_jf {
   datos_nuevos_jf      Json?
   usuario_jf           String?  @db.VarChar(100)
   fecha_jf             DateTime @default(now()) @db.Timestamp(6)
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO DE PAGOS (_ap)
+// Sistema de tarifas, pagos de alumnos, contratos de profesores
+// y nómina. Sufijo _ap (módulo individual).
+// ══════════════════════════════════════════════════════════════
+
+// Tabla de tarifas configurables por el administrador
+model td_tarifa_ap {
+  id_tarifa_ap        Int      @id @default(autoincrement())
+  // PERIODO = inscripción del período académico; CURSO = curso extracurricular
+  concepto_ap         String   @db.VarChar(20)
+  // Si el concepto es CURSO, apunta al curso específico; null = tarifa genérica de período
+  id_curso_ap         Int?
+  monto_ap            Decimal  @db.Decimal(10, 2)
+  descripcion_ap      String?  @db.VarChar(255)
+  activa_ap           Boolean  @default(true)
+  creadoEn_ap         DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ap    DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  curso_ap            td_curso_ahbb? @relation(fields: [id_curso_ap], references: [id_curso_ahbb], onDelete: SetNull)
+  pagos_ap            td_pago_ap[]
+}
+
+// Registro de cada pago realizado por un alumno
+model td_pago_ap {
+  id_pago_ap              Int      @id @default(autoincrement())
+  id_usuario_ap           Int
+  // Relación con período (si el concepto es PERIODO)
+  id_periodo_ap           Int?
+  // Relación con curso (si el concepto es CURSO)
+  id_curso_pago_ap        Int?
+  id_tarifa_ap            Int
+  concepto_ap             String   @db.VarChar(20)
+  monto_ap                Decimal  @db.Decimal(10, 2)
+  // Referencia del pago móvil o transferencia (simulado)
+  referencia_ap           String   @db.VarChar(120)
+  // PENDIENTE → CONFIRMADO / RECHAZADO
+  estado_ap               String   @default("PENDIENTE") @db.VarChar(20)
+  observacion_ap          String?  @db.Text
+  confirmadoPorId_ap      Int?
+  confirmadoEn_ap         DateTime? @db.Timestamp(6)
+  creadoEn_ap             DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ap        DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  alumno_ap               td_usuario_ahbb           @relation("AlumnoPago", fields: [id_usuario_ap], references: [id_usuario_ahbb], onDelete: Cascade)
+  periodo_ap              td_periodo_academico_cjgp? @relation(fields: [id_periodo_ap], references: [id_periodo_cjgp], onDelete: SetNull)
+  curso_ap                td_curso_ahbb?             @relation(fields: [id_curso_pago_ap], references: [id_curso_ahbb], onDelete: SetNull)
+  tarifa_ap               td_tarifa_ap               @relation(fields: [id_tarifa_ap], references: [id_tarifa_ap])
+  confirmadoPor_ap        td_usuario_ahbb?           @relation("ConfirmadorPago", fields: [confirmadoPorId_ap], references: [id_usuario_ahbb])
+  recibo_ap               td_recibo_pago_ap?
+
+  // Un alumno solo puede tener un pago CONFIRMADO por período (enforced en lógica de negocio)
+  @@index([id_usuario_ap, id_periodo_ap, estado_ap])
+}
+
+// Contrato del profesor: FIJO (sueldo mensual) o POR_HORA (tarifa/hora)
+model td_contrato_profesor_ap {
+  id_contrato_ap      Int      @id @default(autoincrement())
+  id_profesor_ap      Int      @unique
+  // FIJO = monto es el sueldo mensual; POR_HORA = monto es la tarifa por hora dictada
+  tipo_ap             String   @db.VarChar(20)
+  monto_ap            Decimal  @db.Decimal(10, 2)
+  activo_ap           Boolean  @default(true)
+  creadoEn_ap         DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ap    DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  profesor_ap         td_usuario_ahbb @relation("ProfesorContrato", fields: [id_profesor_ap], references: [id_usuario_ahbb], onDelete: Cascade)
+  nominas_ap          td_nomina_ap[]
+}
+
+// Registro de nómina generada por período para cada profesor
+model td_nomina_ap {
+  id_nomina_ap            Int      @id @default(autoincrement())
+  id_contrato_ap          Int
+  id_periodo_ap           Int
+  // Horas calculadas (relevante para tipo POR_HORA)
+  horas_ap                Decimal? @db.Decimal(8, 2)
+  monto_calculado_ap      Decimal  @db.Decimal(10, 2)
+  // SIMULADO (calculado) → PAGADO (aprobado por admin)
+  estado_ap               String   @default("SIMULADO") @db.VarChar(20)
+  creadoEn_ap             DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  contrato_ap             td_contrato_profesor_ap   @relation(fields: [id_contrato_ap], references: [id_contrato_ap], onDelete: Cascade)
+  periodo_ap              td_periodo_academico_cjgp @relation(fields: [id_periodo_ap], references: [id_periodo_cjgp], onDelete: Cascade)
+  recibo_ap               td_recibo_pago_ap?
+
+  // Una nómina por contrato-período
+  @@unique([id_contrato_ap, id_periodo_ap])
+}
+
+// Recibos de pago (para alumnos y para nóminas de profesores)
+model td_recibo_pago_ap {
+  id_recibo_ap            Int      @id @default(autoincrement())
+  // Exactamente uno de los dos debe ser no nulo
+  id_pago_ap              Int?     @unique
+  id_nomina_ap            Int?     @unique
+  codigo_ap               String   @unique @db.VarChar(80)
+  // Hash SHA-256 del contenido del recibo (respaldo inalterable)
+  hashVerificacion_ap     String   @db.VarChar(64)
+  creadoEn_ap             DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  pago_ap                 td_pago_ap?   @relation(fields: [id_pago_ap], references: [id_pago_ap], onDelete: Cascade)
+  nomina_ap               td_nomina_ap? @relation(fields: [id_nomina_ap], references: [id_nomina_ap], onDelete: Cascade)
 }

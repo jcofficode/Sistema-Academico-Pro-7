@@ -36,6 +36,12 @@ const MENU_ADMINISTRADOR_AHBB = [
   { icono: 'store', etiqueta: 'Tienda Oficial', ruta: '/tienda', encabezado: 'E-Commerce', separador: true },
   { icono: 'inventory', etiqueta: 'Gestión de Productos', ruta: '/admin/tienda' },
   { icono: 'settings', etiqueta: 'Configuración', ruta: '/admin/configuracion', encabezado: 'Sistema', separador: true },
+
+  // ─── Sistema de Pagos (AP) ───
+  { icono: 'payments', etiqueta: 'Tarifas de Pago', ruta: '/admin/pagos/tarifas', encabezado: 'Sistema de Pagos (AP)', separador: true },
+  { icono: 'task_alt', etiqueta: 'Confirmar Pagos', ruta: '/admin/pagos/confirmar' },
+  { icono: 'badge', etiqueta: 'Contratos de Docentes', ruta: '/admin/pagos/contratos' },
+  { icono: 'receipt_long', etiqueta: 'Nómina Docente', ruta: '/admin/pagos/nomina' },
 ];
 
 /** Menú del Profesor */
@@ -61,6 +67,10 @@ const MENU_PROFESOR_AHBB = [
 
   // ─── Aula Virtual (RP) ───
   { icono: 'ondemand_video', etiqueta: 'Cursos Multimedia', ruta: '/profesor/cursos-multimedia', encabezado: 'Aula Virtual (RP)', separador: true },
+
+  // ─── Sistema de Pagos (AP) ───
+  { icono: 'badge', etiqueta: 'Mi Contrato', ruta: '/profesor/pagos/mi-contrato', encabezado: 'Mis Pagos (AP)', separador: true },
+  { icono: 'receipt_long', etiqueta: 'Mis Recibos de Nómina', ruta: '/profesor/pagos/mis-recibos' },
 ];
 
 /** Menú del Alumno */
@@ -84,6 +94,9 @@ const MENU_ALUMNO_AHBB = [
 
   // ─── Aula Virtual (RP) ───
   { icono: 'school', etiqueta: 'Mi Aula Virtual', ruta: '/alumno/aula-virtual', encabezado: 'Aula Virtual (RP)', separador: true },
+
+  // ─── Sistema de Pagos (AP) ───
+  { icono: 'account_balance_wallet', etiqueta: 'Mis Pagos', ruta: '/alumno/mis-pagos', encabezado: 'Sistema de Pagos (AP)', separador: true },
 ];
 
 /**

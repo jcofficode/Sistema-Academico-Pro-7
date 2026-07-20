@@ -7,12 +7,14 @@ import { PrismaService } from '../prisma.service';
 import { CursosService } from '../cursos/cursos.service';
 import { CrearInscripcionDto_ahbb } from './dto/crear-inscripcion.dto_ahbb';
 import { ActualizarEstadoInscripcionDto_ahbb } from './dto/actualizar-estado-inscripcion.dto_ahbb';
+import { PagosService_ap } from '../pagos/pagos.service_ap';
 
 @Injectable()
 export class InscripcionesService_ahbb {
   constructor(
     private readonly prisma_ahbb: PrismaService,
     private readonly cursosService_ahbb: CursosService,
+    private readonly pagosService_ap: PagosService_ap,
   ) {}
 
   async crearInscripcion_ahbb(datos_ahbb: CrearInscripcionDto_ahbb) {
@@ -43,6 +45,17 @@ export class InscripcionesService_ahbb {
       curso_ahbb.fechaInicio_ahbb ?? new Date(),
       curso_ahbb.fechaFin_ahbb ?? new Date(),
     );
+
+    // ── REGLA DE NEGOCIO (_ap): validar pago confirmado del curso ──
+    const tienePago_ap = await this.pagosService_ap.tienePagoCurso_ap(
+      datos_ahbb.id_usuario_inscripcion_ahbb,
+      datos_ahbb.id_curso_inscripcion_ahbb,
+    );
+    if (!tienePago_ap) {
+      throw new BadRequestException(
+        'Debes registrar y tener confirmado el pago del curso antes de inscribirte. Ve a la sección "Mis Pagos".',
+      );
+    }
 
     return this.prisma_ahbb.$transaction(async (tx_ahbb) => {
       const totalActivos_ahbb = await tx_ahbb.td_inscripcion_ahbb.count({
