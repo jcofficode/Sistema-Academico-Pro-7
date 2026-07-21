@@ -52,6 +52,10 @@ model td_usuario_ahbb {
   pagos_ap                   td_pago_ap[]            @relation("AlumnoPago")
   pagosConfirmados_ap        td_pago_ap[]            @relation("ConfirmadorPago")
   contrato_ap                td_contrato_profesor_ap? @relation("ProfesorContrato")
+
+  // Relaciones Módulo Plan de Estudio (_ga)
+  planesEstudioElaborados_ga td_plan_estudio_ga[]     @relation("ProfesorPlan")
+  revisionesPlan_ga          td_revision_plan_ga[]
 }
 
 model td_curso_ahbb {
@@ -299,6 +303,9 @@ model td_materia_cjgp {
   inscripciones_cjgp  td_inscripcion_materia_cjgp[]
   actas_jc            td_acta_jc[]
 
+  // Relaciones Módulo Plan de Estudio (_ga)
+  planesEstudio_ga    td_plan_estudio_ga[]
+
   // Un código de materia no puede repetirse dentro de la misma carrera
   @@unique([id_carrera_materia_cjgp, codigo_cjgp])
 }
@@ -333,6 +340,10 @@ model td_periodo_academico_cjgp {
   // Relaciones Módulo de Pagos (_ap)
   pagos_ap              td_pago_ap[]
   nominas_ap            td_nomina_ap[]
+
+  // Relaciones Módulo Plan de Estudio (_ga)
+  plantillasPlan_ga     td_plantilla_plan_ga[]
+  planesEstudio_ga      td_plan_estudio_ga[]
 }
 
 // Historial académico del alumno por materia y período (Épica 2 y 3)
@@ -402,6 +413,9 @@ model td_item_evaluacion_jc {
   // Relaciones
   plan_jc          td_plan_evaluacion_jc @relation(fields: [id_plan_item_jc], references: [id_plan_jc], onDelete: Cascade)
   calificaciones_jc td_calificacion_jc[]
+
+  // Relaciones Módulo Plan de Estudio (_ga)
+  unidadesPlan_ga   td_unidad_ga[]
 
   @@unique([id_plan_item_jc, orden_jc])
 }
@@ -666,4 +680,161 @@ model td_recibo_pago_ap {
   // Relaciones
   pago_ap                 td_pago_ap?   @relation(fields: [id_pago_ap], references: [id_pago_ap], onDelete: Cascade)
   nomina_ap               td_nomina_ap? @relation(fields: [id_nomina_ap], references: [id_nomina_ap], onDelete: Cascade)
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO PLAN DE ESTUDIO (_ga)
+// Planificación académica dirigida por metadatos: la coordinación
+// configura el formato y el profesor llena su plan dentro de ese
+// formato. Sufijo _ga (módulo individual).
+// ══════════════════════════════════════════════════════════════
+
+// Plantilla institucional: define el formato de planificación por período
+model td_plantilla_plan_ga {
+  id_plantilla_ga       Int      @id @default(autoincrement())
+  id_periodo_ga         Int
+  nombre_ga             String   @db.VarChar(200)
+  // CUANTITATIVO: escala numérica · CUALITATIVO: niveles con etiqueta
+  tipo_valoracion_ga    String   @db.VarChar(20)
+  escala_min_ga         Decimal? @db.Decimal(5, 2)
+  escala_max_ga         Decimal? @db.Decimal(5, 2)
+  // Si true, los indicadores cuantitativos son ponderados (Σ pesos = 100%)
+  ponderado_ga          Boolean  @default(false)
+  estado_ga             String   @default("BORRADOR") @db.VarChar(20)
+  creadoEn_ga           DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ga      DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  periodo_ga            td_periodo_academico_cjgp @relation(fields: [id_periodo_ga], references: [id_periodo_cjgp], onDelete: Cascade)
+  secciones_ga          td_seccion_plantilla_ga[]
+  niveles_ga            td_nivel_cualitativo_ga[]
+  planes_ga             td_plan_estudio_ga[]
+
+  // Una sola plantilla por período
+  @@unique([id_periodo_ga])
+}
+
+// Secciones configurables: Justificación, Objetivos, Estrategias...
+model td_seccion_plantilla_ga {
+  id_seccion_ga             Int     @id @default(autoincrement())
+  id_plantilla_seccion_ga   Int
+  nombre_ga                 String  @db.VarChar(200)
+  orden_ga                  Int
+  obligatoria_ga            Boolean @default(true)
+  // TEXTO = textarea libre · LISTA = ítems en JSON array · ARCHIVO = ruta de archivo subido
+  tipo_contenido_ga         String  @db.VarChar(20)
+
+  // Relaciones
+  plantilla_ga              td_plantilla_plan_ga @relation(fields: [id_plantilla_seccion_ga], references: [id_plantilla_ga], onDelete: Cascade)
+  contenidos_ga             td_contenido_seccion_ga[]
+
+  @@unique([id_plantilla_seccion_ga, orden_ga])
+}
+
+// Niveles de valoración cualitativa: Iniciado, En Proceso, Consolidado...
+model td_nivel_cualitativo_ga {
+  id_nivel_ga               Int     @id @default(autoincrement())
+  id_plantilla_nivel_ga     Int
+  etiqueta_ga               String  @db.VarChar(100)
+  descripcion_ga            String? @db.VarChar(500)
+  orden_ga                  Int
+
+  // Relaciones
+  plantilla_ga              td_plantilla_plan_ga @relation(fields: [id_plantilla_nivel_ga], references: [id_plantilla_ga], onDelete: Cascade)
+  indicadores_ga            td_indicador_ga[]
+
+  @@unique([id_plantilla_nivel_ga, orden_ga])
+}
+
+// Plan de estudio de una materia en un período (un solo plan por materia-período)
+model td_plan_estudio_ga {
+  id_plan_estudio_ga    Int      @id @default(autoincrement())
+  id_materia_ga         Int
+  id_periodo_ga         Int
+  id_profesor_ga        Int
+  id_plantilla_ga       Int
+  // BORRADOR | ENTREGADO | APROBADO | DEVUELTO
+  estado_ga             String   @default("BORRADOR") @db.VarChar(20)
+  codigo_ga             String?  @unique @db.VarChar(80)
+  hashVerificacion_ga   String?  @db.VarChar(64)
+  creadoEn_ga           DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_ga      DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  materia_ga            td_materia_cjgp           @relation(fields: [id_materia_ga], references: [id_materia_cjgp], onDelete: Cascade)
+  periodo_ga            td_periodo_academico_cjgp @relation(fields: [id_periodo_ga], references: [id_periodo_cjgp], onDelete: Cascade)
+  profesor_ga           td_usuario_ahbb           @relation("ProfesorPlan", fields: [id_profesor_ga], references: [id_usuario_ahbb], onDelete: Cascade)
+  plantilla_ga          td_plantilla_plan_ga      @relation(fields: [id_plantilla_ga], references: [id_plantilla_ga], onDelete: Cascade)
+  contenidos_ga         td_contenido_seccion_ga[]
+  unidades_ga           td_unidad_ga[]
+  revisiones_ga         td_revision_plan_ga[]
+
+  // Un solo plan por materia-período (integridad académica)
+  @@unique([id_materia_ga, id_periodo_ga])
+}
+
+// Contenido que el profesor escribe para cada sección de la plantilla
+model td_contenido_seccion_ga {
+  id_contenido_ga           Int      @id @default(autoincrement())
+  id_plan_contenido_ga      Int
+  id_seccion_contenido_ga   Int
+  // TEXTO: texto libre · LISTA: JSON array de ítems · ARCHIVO: ruta relativa al archivo subido
+  texto_ga                  String?  @db.Text
+
+  // Relaciones
+  plan_ga                   td_plan_estudio_ga      @relation(fields: [id_plan_contenido_ga], references: [id_plan_estudio_ga], onDelete: Cascade)
+  seccion_ga                td_seccion_plantilla_ga @relation(fields: [id_seccion_contenido_ga], references: [id_seccion_ga], onDelete: Cascade)
+
+  // Un solo contenido por plan × sección
+  @@unique([id_plan_contenido_ga, id_seccion_contenido_ga])
+}
+
+// Unidad temática del plan con cronograma dentro del período
+model td_unidad_ga {
+  id_unidad_ga              Int      @id @default(autoincrement())
+  id_plan_unidad_ga         Int
+  nombre_ga                 String   @db.VarChar(200)
+  orden_ga                  Int
+  fecha_inicio_ga           DateTime @db.Date
+  fecha_fin_ga              DateTime @db.Date
+  // Vinculación opcional con un ítem del plan de evaluación _jc
+  id_item_evaluacion_ga     Int?
+
+  // Relaciones
+  plan_ga                   td_plan_estudio_ga      @relation(fields: [id_plan_unidad_ga], references: [id_plan_estudio_ga], onDelete: Cascade)
+  itemEvaluacion_ga         td_item_evaluacion_jc?  @relation(fields: [id_item_evaluacion_ga], references: [id_item_jc], onDelete: SetNull)
+  indicadores_ga            td_indicador_ga[]
+
+  @@unique([id_plan_unidad_ga, orden_ga])
+}
+
+// Indicador de logro por unidad (valorado según la plantilla)
+model td_indicador_ga {
+  id_indicador_ga           Int      @id @default(autoincrement())
+  id_unidad_indicador_ga    Int
+  descripcion_ga            String   @db.VarChar(500)
+  orden_ga                  Int
+  // Si CUANTITATIVO: valor numérico o peso porcentual
+  valor_ga                  Decimal? @db.Decimal(5, 2)
+  // Si CUALITATIVO: referencia al nivel configurado
+  id_nivel_ga               Int?
+
+  // Relaciones
+  unidad_ga                 td_unidad_ga             @relation(fields: [id_unidad_indicador_ga], references: [id_unidad_ga], onDelete: Cascade)
+  nivel_ga                  td_nivel_cualitativo_ga? @relation(fields: [id_nivel_ga], references: [id_nivel_ga], onDelete: SetNull)
+}
+
+// Historial de revisiones (auditoría de aprobaciones y devoluciones)
+model td_revision_plan_ga {
+  id_revision_ga            Int      @id @default(autoincrement())
+  id_plan_revision_ga       Int
+  id_revisor_ga             Int
+  // APROBADO | DEVUELTO
+  accion_ga                 String   @db.VarChar(20)
+  observacion_ga            String?  @db.Text
+  creadoEn_ga               DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  plan_ga                   td_plan_estudio_ga @relation(fields: [id_plan_revision_ga], references: [id_plan_estudio_ga], onDelete: Cascade)
+  revisor_ga                td_usuario_ahbb    @relation(fields: [id_revisor_ga], references: [id_usuario_ahbb])
 }

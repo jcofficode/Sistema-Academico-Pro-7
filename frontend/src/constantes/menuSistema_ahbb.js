@@ -27,6 +27,10 @@ const MENU_ADMINISTRADOR_AHBB = [
   { icono: 'grading', etiqueta: 'Carga de Notas y Actas', ruta: '/control-estudios/carga-notas' },
   { icono: 'dataset', etiqueta: 'Consola Control Estudios', ruta: '/admin/control-estudios' },
 
+  // ─── Planificación (GA) ───
+  { icono: 'format_list_bulleted', etiqueta: 'Plantillas de Plan', ruta: '/admin/plan-estudio/plantillas', encabezado: 'Planificación (GA)', separador: true },
+  { icono: 'checklist_rtl', etiqueta: 'Bandeja de Revisión', ruta: '/admin/plan-estudio/bandeja' },
+
   // ─── Cursos libres del sistema original (independientes de la carrera) ───
   { icono: 'school', etiqueta: 'Cursos', ruta: '/cursos', encabezado: 'Cursos Extracurriculares', separador: true },
   { icono: 'how_to_reg', etiqueta: 'Inscripciones de Cursos', ruta: '/inscripciones' },
@@ -53,6 +57,9 @@ const MENU_PROFESOR_AHBB = [
   { icono: 'collections_bookmark', etiqueta: 'Mis Materias', ruta: '/profesor/mis-materias-carrera', encabezado: 'Carreras (CJGP)', separador: true },
   { icono: 'history_edu', etiqueta: 'Mi Historial de Materias', ruta: '/profesor/historial-materias' },
   { icono: 'grading', etiqueta: 'Carga de Notas y Actas', ruta: '/control-estudios/carga-notas', encabezado: 'Control de Estudios (JC)', separador: true },
+
+  // ─── Planificación (GA) ───
+  { icono: 'edit_note', etiqueta: 'Elaborar Plan de Estudio', ruta: '/profesor/plan-estudio', encabezado: 'Planificación (GA)', separador: true },
 
   // ─── Cursos libres del sistema original ───
   { icono: 'school', etiqueta: 'Mis Cursos', ruta: '/cursos', encabezado: 'Cursos Extracurriculares', separador: true },
@@ -83,6 +90,9 @@ const MENU_ALUMNO_AHBB = [
   { icono: 'collections_bookmark', etiqueta: 'Mis Materias', ruta: '/alumno/mis-materias' },
   { icono: 'grading', etiqueta: 'Mis Notas', ruta: '/alumno/mis-notas' },
   { icono: 'history_edu', etiqueta: 'Historial de Carrera', ruta: '/alumno/historial-carrera' },
+
+  // ─── Planificación (GA) ───
+  { icono: 'visibility', etiqueta: 'Planes de Estudio', ruta: '/alumno/planes-estudio', encabezado: 'Planificación (GA)', separador: true },
 
   // ─── CURSOS EXTRACURRICULARES: cursos libres certificados (_ahbb) ───
   { icono: 'menu_book', etiqueta: 'Oferta de Cursos', ruta: '/alumno/oferta-academica', encabezado: 'Cursos Extracurriculares', separador: true },

@@ -16,6 +16,7 @@ import { AcademicoModule_cjgp } from './academico/academico.module_cjgp';
 import { ControlEstudiosModule_jc } from './control-estudios/control-estudios.module_jc';
 import { MultimediaModule_jf } from './multimedia/multimedia.module_jf';
 import { PagosModule_ap } from './pagos/pagos.module_ap';
+import { PlanEstudioModule_ga } from './plan-estudio/plan-estudio.module_ga';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { PagosModule_ap } from './pagos/pagos.module_ap';
     ControlEstudiosModule_jc,
     MultimediaModule_jf,
     PagosModule_ap,
+    PlanEstudioModule_ga,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, BootstrapService_ahbb],

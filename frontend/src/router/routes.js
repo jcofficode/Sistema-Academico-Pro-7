@@ -213,6 +213,32 @@ const routes = [
     meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, ADMIN] },
   },
 
+  // ─── Módulo Plan de Estudio (_ga) ────────────────────────
+  {
+    path: '/admin/plan-estudio/plantillas',
+    name: 'adminPlantillasPlan_ga',
+    component: () => import('pages/admin/PlantillasPlanView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/plan-estudio/bandeja',
+    name: 'adminBandejaRevisionPlan_ga',
+    component: () => import('pages/admin/BandejaRevisionView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/profesor/plan-estudio',
+    name: 'profesorElaborarPlan_ga',
+    component: () => import('pages/profesor/ElaborarPlanView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF] },
+  },
+  {
+    path: '/alumno/planes-estudio',
+    name: 'alumnoMisPlanes_ga',
+    component: () => import('pages/alumno/MisPlanesEstudioView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+
   // ─── Rutas exclusivas del profesor ─────────────────────
   {
     path: '/profesor/mis-alumnos',
