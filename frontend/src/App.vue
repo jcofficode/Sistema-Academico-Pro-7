@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAutenticacionStore_ahbb } from './stores/autenticacionStore_ahbb';
 import { useCursosStore_ahbb } from './stores/cursosStore_ahbb';
 import { obtenerMenuPorRol_ahbb } from './constantes/menuSistema_ahbb';
+import { presentacionRol_ahbb } from './constantes/roles_ahbb';
 import { obtenerAlumnosSuscripciones_ahbb } from './servicios/usuariosServicio_ahbb';
 import { useAutoRefresh_ahbb } from './composables/useAutoRefresh_ahbb';
 
@@ -43,25 +44,19 @@ const enlacesMenu_ahbb = computed(() => {
 });
 
 /**
- * Color del badge de rol.
+ * Presentación del rol activo (color, icono y etiqueta) tomada del catálogo
+ * único de roles, de modo que cualquier rol nuevo —como Control de Estudios—
+ * aparezca en el badge sin tener que tocar esta vista.
  */
-const colorRol_ahbb = computed(() => {
-  const rol_ahbb = authStore_ahbb.usuarioActivo_ahbb?.rol;
-  if (rol_ahbb === 'administrador') return 'red';
-  if (rol_ahbb === 'profesor') return 'blue';
-  return 'green';
-});
+const presentacionRolActivo_ahbb = computed(() =>
+  presentacionRol_ahbb(authStore_ahbb.usuarioActivo_ahbb?.rol),
+);
 
-/**
- * Etiqueta legible del rol.
- */
-const etiquetaRol_ahbb = computed(() => {
-  const rol_ahbb = authStore_ahbb.usuarioActivo_ahbb?.rol;
-  if (rol_ahbb === 'administrador') return 'Admin';
-  if (rol_ahbb === 'profesor') return 'Profesor';
-  if (rol_ahbb === 'alumno') return 'Alumno';
-  return '';
-});
+const colorRol_ahbb = computed(() => presentacionRolActivo_ahbb.value.color);
+const iconoRol_ahbb = computed(() => presentacionRolActivo_ahbb.value.icono);
+const etiquetaRolActivo_ahbb = computed(
+  () => presentacionRolActivo_ahbb.value.etiquetaCorta,
+);
 
 /**
  * Cierra la sesión y redirige al login.
@@ -159,11 +154,16 @@ onMounted(async () => {
         <q-space />
         <div class="row items-center q-gutter-sm">
           <BadgeCarrito_ahbb v-if="authStore_ahbb.estaAutenticado_ahbb" />
+          <!-- Badge del rol activo: icono + etiqueta del catálogo de roles -->
           <q-badge
+            v-if="authStore_ahbb.estaAutenticado_ahbb"
             :color="colorRol_ahbb"
-            :label="etiquetaRol_ahbb"
-            class="q-mr-sm"
-          />
+            class="q-mr-sm q-px-sm q-py-xs"
+            align="middle"
+          >
+            <q-icon :name="iconoRol_ahbb" size="14px" class="q-mr-xs" />
+            {{ etiquetaRolActivo_ahbb }}
+          </q-badge>
           <span class="text-caption gt-xs">
             {{ authStore_ahbb.nombreCompleto_ahbb }}
           </span>
@@ -216,7 +216,7 @@ onMounted(async () => {
             Academia <span style="color: #f59e0b">H&B</span>
           </q-item-label>
           <q-item-label caption class="text-grey-5" style="font-size: 0.7rem">
-            {{ etiquetaRol_ahbb }}
+            {{ etiquetaRolActivo_ahbb }}
           </q-item-label>
         </q-item-section>
       </q-item>

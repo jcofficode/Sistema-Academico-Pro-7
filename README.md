@@ -8,23 +8,23 @@ oficial y certificados verificables con QR.
 > Proyecto universitario. Sistema base (`_ahbb`) extendido este semestre con
 > **seis módulos nuevos**:
 >
-> | Módulo | Sufijo | Documento |
-> |---|:---:|---|
-> | Carreras y Pensums · Motor de Reglas · Inscripción *(grupal)* | `_cjgp` | [READMEEXPLICACION.md](./READMEEXPLICACION.md) |
-> | Control de Estudios · Auditoría · RBAC *(individual)* | `_jc` | [READMEEXPLICACION-CONTROLESTUDIOS.md](./READMEEXPLICACION-CONTROLESTUDIOS.md) |
-> | Cursos Multimedia y Videollamadas | `_jf` | [READMEEXPLICACION-MULTIMEDIA.md](./READMEEXPLICACION-MULTIMEDIA.md) |
-> | Sistema de Pagos y Nómina | `_ap` | [READMEEXPLICACION-PAGOS.md](./READMEEXPLICACION-PAGOS.md) |
-> | Plan de Estudio (Planificación) | `_ga` | [READMEEXPLICACION-PLANESTUDIO.md](./READMEEXPLICACION-PLANESTUDIO.md) |
+> | Módulo                                                           |  Sufijo  | Documento                                                                     |
+> | ----------------------------------------------------------------- | :-------: | ----------------------------------------------------------------------------- |
+> | Carreras y Pensums · Motor de Reglas · Inscripción*(grupal)* | `_cjgp` | [READMEEXPLICACION.md](./READMEEXPLICACION.md)                                 |
+> | Control de Estudios · Auditoría · RBAC*(individual)*         |  `_jc`  | [READMEEXPLICACION-CONTROLESTUDIOS.md](./READMEEXPLICACION-CONTROLESTUDIOS.md) |
+> | Cursos Multimedia y Videollamadas                                 |  `_jf`  | [READMEEXPLICACION-MULTIMEDIA.md](./READMEEXPLICACION-MULTIMEDIA.md)           |
+> | Sistema de Pagos y Nómina                                        |  `_ap`  | [READMEEXPLICACION-PAGOS.md](./READMEEXPLICACION-PAGOS.md)                     |
+> | Plan de Estudio (Planificación)                                  |  `_ga`  | [READMEEXPLICACION-PLANESTUDIO.md](./READMEEXPLICACION-PLANESTUDIO.md)         |
 
 ---
 
 ## 🧱 Arquitectura
 
-| Capa | Tecnología |
-|---|---|
-| **Frontend (SPA)** | Vue 3 + Quasar 2 (Composition API), Axios, Pinia, Vue Router |
-| **Backend (API REST)** | NestJS 11 (TypeScript), JWT, class-validator, pdfmake, xlsx |
-| **Base de datos** | PostgreSQL + Prisma ORM (migraciones versionadas, stored procedures, triggers y tablas temporales) |
+| Capa                         | Tecnología                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Frontend (SPA)**     | Vue 3 + Quasar 2 (Composition API), Axios, Pinia, Vue Router                                       |
+| **Backend (API REST)** | NestJS 11 (TypeScript), JWT, class-validator, pdfmake, xlsx                                        |
+| **Base de datos**      | PostgreSQL + Prisma ORM (migraciones versionadas, stored procedures, triggers y tablas temporales) |
 
 ```
 frontend (Quasar :9000)  ── Axios/JSON ──►  backend (NestJS :3000/api)  ── Prisma ──►  PostgreSQL
@@ -100,12 +100,12 @@ npm run dev        # abre http://localhost:9000
 
 ### 3. Credenciales de demostración
 
-| Rol | Correo | Contraseña |
-|---|---|---|
-| Administrador | `admin@academiah-b.edu` | `admin123` |
+| Rol                           | Correo                      | Contraseña    |
+| ----------------------------- | --------------------------- | -------------- |
+| Administrador                 | `admin@academiah-b.edu`   | `admin123`   |
 | **Control de Estudios** | `control@academiah-b.edu` | `control123` |
-| Profesor | `carlos@academiah-b.edu` | `prof123` |
-| Alumna | `maria@estudiante.edu` | `alum123` |
+| Profesor                      | `carlos@academiah-b.edu`  | `prof123`    |
+| Alumna                        | `maria@estudiante.edu`    | `alum123`    |
 
 ## 🔐 Seguridad
 

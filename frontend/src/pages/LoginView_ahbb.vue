@@ -5,6 +5,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAutenticacionStore_ahbb } from '../stores/autenticacionStore_ahbb';
+import { PERFILES_DEMO_JC } from '../constantes/perfilesDemo_jc';
 
 const router_ahbb = useRouter();
 const authStore_ahbb = useAutenticacionStore_ahbb();
@@ -13,6 +14,21 @@ const correo_ahbb = ref('');
 const contrasena_ahbb = ref('');
 const cargando_ahbb = ref(false);
 const mostrarContrasena_ahbb = ref(false);
+
+/** Perfil de demostración seleccionado (solo para resaltarlo en la interfaz). */
+const perfilSeleccionado_jc = ref(null);
+
+/**
+ * Rellena el formulario con las credenciales del perfil elegido.
+ * No inicia sesión: el usuario sigue pulsando "Iniciar Sesión", de modo que el
+ * flujo de autenticación es exactamente el mismo que al escribirlas a mano.
+ */
+const usarPerfilDemo_jc = (perfil_jc) => {
+  perfilSeleccionado_jc.value = perfil_jc.rol;
+  correo_ahbb.value = perfil_jc.correo;
+  contrasena_ahbb.value = perfil_jc.contrasena;
+  authStore_ahbb.limpiarError_ahbb();
+};
 
 const manejarLogin_ahbb = async () => {
   cargando_ahbb.value = true;
@@ -123,7 +139,58 @@ const manejarLogin_ahbb = async () => {
           </router-link>
         </p>
 
-        <!-- Demo credentials removed for security -->
+        <!-- ── Acceso rápido de evaluación ──────────────────────────
+             Rellena el formulario con las credenciales del perfil elegido.
+             El inicio de sesión sigue siendo el mismo: se pulsa el botón. -->
+        <div class="acceso-rapido_jc q-mt-md">
+          <div class="separador_jc">
+            <span>Acceso rápido de evaluación</span>
+          </div>
+
+          <div class="row q-col-gutter-sm q-mt-xs">
+            <div v-for="perfil_jc in PERFILES_DEMO_JC" :key="perfil_jc.rol" class="col-6">
+              <q-card
+                flat
+                bordered
+                class="perfil-demo_jc cursor-pointer"
+                :class="{ 'perfil-demo--activo_jc': perfilSeleccionado_jc === perfil_jc.rol }"
+                @click="usarPerfilDemo_jc(perfil_jc)"
+              >
+                <q-card-section class="q-pa-sm row items-center no-wrap">
+                  <q-avatar
+                    :color="perfil_jc.color"
+                    text-color="white"
+                    :icon="perfil_jc.icono"
+                    size="30px"
+                  />
+                  <div class="q-ml-sm col overflow-hidden">
+                    <div class="text-caption text-weight-bold ellipsis">
+                      {{ perfil_jc.etiqueta }}
+                    </div>
+                    <div class="text-grey-6 ellipsis" style="font-size: 0.68rem">
+                      {{ perfil_jc.descripcion }}
+                    </div>
+                  </div>
+                  <q-icon
+                    v-if="perfilSeleccionado_jc === perfil_jc.rol"
+                    name="check_circle"
+                    :color="perfil_jc.color"
+                    size="18px"
+                  />
+                </q-card-section>
+
+                <q-tooltip anchor="top middle" self="bottom middle">
+                  Entrar como {{ perfil_jc.etiqueta }} · {{ perfil_jc.correo }}
+                </q-tooltip>
+              </q-card>
+            </div>
+          </div>
+
+          <p class="text-center text-grey-6 q-mt-sm q-mb-none" style="font-size: 0.72rem">
+            <q-icon name="info" size="13px" class="q-mr-xs" />
+            Elige un perfil y pulsa <strong>Iniciar Sesión</strong>.
+          </p>
+        </div>
       </q-card-section>
     </q-card>
   </div>
@@ -139,5 +206,38 @@ const manejarLogin_ahbb = async () => {
   width: 100%;
   max-width: 440px;
   border-radius: 16px;
+}
+
+/* ── Acceso rápido de evaluación ─────────────────────────────── */
+.separador_jc {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #9e9e9e;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.separador_jc::before,
+.separador_jc::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.perfil-demo_jc {
+  border-radius: 10px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.perfil-demo_jc:hover {
+  border-color: #1b2a4a;
+  box-shadow: 0 2px 8px rgba(27, 42, 74, 0.14);
+  transform: translateY(-1px);
+}
+.perfil-demo--activo_jc {
+  border-color: #1b2a4a;
+  background: #f5f7fb;
+  box-shadow: inset 0 0 0 1px #1b2a4a;
 }
 </style>

@@ -63,7 +63,9 @@ export const CATALOGO_ROLES_JC = [
     etiquetaFrontend: 'profesor',
     descripcion:
       'Docente: carga las notas de las materias que tiene asignadas, registra reparaciones y emite sus actas.',
-    color: 'primary',
+    // Se usa un color con paleta completa (blue-1 … blue-9) porque el frontend
+    // deriva tonos a partir de este valor para los chips de la consola RBAC.
+    color: 'blue',
     icono: 'co_present',
   },
   {
