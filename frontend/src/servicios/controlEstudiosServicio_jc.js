@@ -159,12 +159,12 @@ export const cerrarActa_jc = async (idMateria_jc, idPeriodo_jc) => {
 
 // ─── Actas PDF y reportes ─────────────────────────────────────
 
-/** Descarga el acta (BLANCA o VERDE) y la abre en una pestaña nueva. */
-export const descargarActaPdf_jc = async (idMateria_jc, idPeriodo_jc, tipo_jc) => {
+/** Descarga el acta oficial en PDF y la abre en una pestaña nueva. */
+export const descargarActaPdf_jc = async (idMateria_jc, idPeriodo_jc) => {
   try {
     const respuesta_jc = await apiCliente_ahbb.get(
       `/control-estudios/actas/${idMateria_jc}/${idPeriodo_jc}/pdf`,
-      { params: { tipo: tipo_jc }, responseType: 'blob' },
+      { responseType: 'blob' },
     );
     const blob_jc = new Blob([respuesta_jc.data], { type: 'application/pdf' });
     window.open(window.URL.createObjectURL(blob_jc), '_blank');
@@ -219,3 +219,118 @@ export const validarCsv_jc = (entidad_jc, archivo_jc) =>
 
 export const confirmarCsv_jc = (entidad_jc, archivo_jc) =>
   enviarCsv_jc(entidad_jc, archivo_jc, 'confirmar');
+
+// ─── Reparaciones por corte ───────────────────────────────────
+
+/** Cortes de un alumno con su nota, su reparación y la nota efectiva. */
+export const obtenerReparaciones_jc = async (idInscripcion_jc) => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    `/control-estudios/reparaciones/inscripcion/${idInscripcion_jc}`,
+  );
+  return respuesta_jc.data;
+};
+
+export const registrarReparacion_jc = async (datos_jc) => {
+  try {
+    const respuesta_jc = await apiCliente_ahbb.post(
+      '/control-estudios/reparaciones',
+      datos_jc,
+    );
+    return respuesta_jc.data;
+  } catch (error_jc) {
+    return {
+      exito: false,
+      ...extraerError_jc(error_jc, 'No se pudo registrar la reparación.'),
+    };
+  }
+};
+
+export const eliminarReparacion_jc = async (idReparacion_jc) => {
+  try {
+    const respuesta_jc = await apiCliente_ahbb.delete(
+      `/control-estudios/reparaciones/${idReparacion_jc}`,
+    );
+    return respuesta_jc.data;
+  } catch (error_jc) {
+    return {
+      exito: false,
+      ...extraerError_jc(error_jc, 'No se pudo eliminar la reparación.'),
+    };
+  }
+};
+
+// ─── Consulta de notas (solo lectura para el administrador) ───
+
+export const consultarNotas_jc = async (idPeriodo_jc, filtros_jc = {}) => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    `/control-estudios/calificaciones/consulta/${idPeriodo_jc}`,
+    { params: filtros_jc },
+  );
+  return respuesta_jc.data;
+};
+
+// ─── Certificados de Sobresaliente ────────────────────────────
+
+export const obtenerMisCertificadosSobresaliente_jc = async () => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    '/control-estudios/certificados-sobresaliente/mis-certificados',
+  );
+  return respuesta_jc.data;
+};
+
+export const obtenerCertificadosSobresaliente_jc = async () => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    '/control-estudios/certificados-sobresaliente',
+  );
+  return respuesta_jc.data;
+};
+
+/** Descarga el certificado de sobresaliente y lo abre en otra pestaña. */
+export const descargarCertificadoSobresaliente_jc = async (idCertificado_jc) => {
+  try {
+    const respuesta_jc = await apiCliente_ahbb.get(
+      `/control-estudios/certificados-sobresaliente/${idCertificado_jc}/pdf`,
+      { responseType: 'blob' },
+    );
+    const blob_jc = new Blob([respuesta_jc.data], { type: 'application/pdf' });
+    window.open(window.URL.createObjectURL(blob_jc), '_blank');
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// ─── Notificaciones del usuario ───────────────────────────────
+
+export const obtenerMisNotificaciones_jc = async (soloNoLeidas_jc = false) => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    '/control-estudios/notificaciones/mis-notificaciones',
+    { params: { soloNoLeidas: soloNoLeidas_jc } },
+  );
+  return respuesta_jc.data;
+};
+
+export const marcarNotificacionLeida_jc = async (idNotificacion_jc) => {
+  const respuesta_jc = await apiCliente_ahbb.patch(
+    `/control-estudios/notificaciones/${idNotificacion_jc}/leer`,
+  );
+  return respuesta_jc.data;
+};
+
+// ─── Auditoría ────────────────────────────────────────────────
+
+/** Bitácora académica del módulo de Control de Estudios. */
+export const obtenerAuditoriaControlEstudios_jc = async (filtros_jc = {}) => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    '/auditoria/control-estudios',
+    { params: filtros_jc },
+  );
+  return respuesta_jc.data;
+};
+
+export const obtenerResumenAuditoriaControlEstudios_jc = async () => {
+  const respuesta_jc = await apiCliente_ahbb.get(
+    '/auditoria/control-estudios/resumen',
+  );
+  return respuesta_jc.data;
+};

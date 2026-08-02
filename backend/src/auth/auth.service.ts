@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import { normalizarRol_jc } from '../common/constantes/roles_jc';
 
 @Injectable()
 export class AuthService {
@@ -102,9 +103,11 @@ export class AuthService {
       datos_ahbb.cedula ??
       `V-${Math.floor(Math.random() * 100000000)}`;
     
-    const rol_ahbb = String(
+    // Se normaliza con el catálogo único de roles para admitir también
+    // CONTROL_ESTUDIOS y sus variantes de escritura.
+    const rol_ahbb = normalizarRol_jc(
       datos_ahbb.rol_ahbb ?? datos_ahbb.rol ?? 'ALUMNO',
-    ).toUpperCase();
+    );
 
     const nuevoUsuario_ahbb = await this.usuariosService_ahbb.crearUsuario_ahbb(
       {

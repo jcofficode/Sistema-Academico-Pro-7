@@ -1,10 +1,16 @@
 <!--
-  CargaNotasView_jc.vue — Docente UI de carga de notas.
+  CargaNotasView_jc.vue — Carga de notas (profesor y Control de Estudios).
 
-  Las columnas de entrada se generan DINÁMICAMENTE según el plan de
-  evaluación definido por la administración: el profesor solo carga el
-  resultado final de cada hito configurado, sin importar cuántos sean.
-  Desde aquí también se emiten las actas (blanca/verde) y se cierra el acta.
+  Las columnas de entrada se generan DINÁMICAMENTE según el plan de evaluación
+  definido por la administración: quien carga solo introduce el resultado final
+  de cada corte configurado, sin importar cuántos sean.
+
+  Sobre esa matriz se registran las REPARACIONES: cualquier corte puede
+  repararse durante la carga (no se configuran en el plan), y la nota que entra
+  en la ponderación es la mejor entre la original y la de reparación.
+
+  Desde aquí también se emite el acta oficial en PDF y se cierra el acta, lo que
+  además dispara los Certificados de Sobresaliente (17 a 20 puntos).
 -->
 <script setup>
 import { ref, computed, onMounted } from 'vue';
@@ -16,6 +22,8 @@ import {
   guardarNotas_jc,
   cerrarActa_jc,
   descargarActaPdf_jc,
+  registrarReparacion_jc,
+  eliminarReparacion_jc,
 } from '../../servicios/controlEstudiosServicio_jc';
 import { obtenerPeriodos_cjgp } from '../../servicios/academicoServicio_cjgp';
 
@@ -34,6 +42,12 @@ const descargando_jc = ref(false);
 // Notas editadas en pantalla: clave "idInscripcion:idItem" → valor
 const notasEditadas_jc = ref({});
 
+// Diálogo de reparaciones del alumno seleccionado
+const dialogoReparacion_jc = ref(false);
+const filaReparacion_jc = ref(null);
+const formularioReparacion_jc = ref({ id_item_jc: null, valor_jc: null, observacion_jc: '' });
+const guardandoReparacion_jc = ref(false);
+
 const claveNota_jc = (idInscripcion_jc, idItem_jc) => `${idInscripcion_jc}:${idItem_jc}`;
 
 const valorNota_jc = (fila_jc, item_jc) => {
@@ -47,24 +61,34 @@ const asignarNota_jc = (fila_jc, item_jc, valor_jc) => {
   notasEditadas_jc.value[clave_jc] = valor_jc === '' || valor_jc === null ? null : Number(valor_jc);
 };
 
+/** Reparación registrada para un corte de un alumno (si existe). */
+const reparacionDe_jc = (fila_jc, item_jc) =>
+  (fila_jc.reparaciones_jc ?? []).find(
+    (reparacion_jc) => reparacion_jc.id_item_jc === item_jc.id_item_jc,
+  ) ?? null;
+
+/** Nota que realmente pondera: la mejor entre la original y la reparación. */
+const notaEfectiva_jc = (fila_jc, item_jc) => {
+  const nota_jc = valorNota_jc(fila_jc, item_jc);
+  const reparacion_jc = reparacionDe_jc(fila_jc, item_jc);
+  if (!reparacion_jc) return nota_jc;
+  return Math.max(Number(nota_jc) || 0, Number(reparacion_jc.valor_jc));
+};
+
 /** Definitiva calculada EN VIVO con la misma regla de metadatos del backend. */
 const definitivaEnVivo_jc = (fila_jc) => {
   if (!matriz_jc.value) return 0;
   let definitiva_jc = 0;
   for (const item_jc of matriz_jc.value.plan.items_jc) {
-    if (item_jc.esRecuperacion_jc) continue;
-    const valor_jc = valorNota_jc(fila_jc, item_jc);
+    const valor_jc = notaEfectiva_jc(fila_jc, item_jc);
     definitiva_jc += ((Number(valor_jc) || 0) * Number(item_jc.peso_jc)) / 100;
-  }
-  for (const item_jc of matriz_jc.value.plan.items_jc) {
-    if (!item_jc.esRecuperacion_jc) continue;
-    const valor_jc = valorNota_jc(fila_jc, item_jc);
-    if (valor_jc !== null && valor_jc !== undefined) {
-      definitiva_jc = Math.max(definitiva_jc, Number(valor_jc));
-    }
   }
   return Math.round(definitiva_jc * 100) / 100;
 };
+
+const notaMinimaSobresaliente_jc = computed(
+  () => matriz_jc.value?.notaMinimaSobresaliente_jc ?? 17,
+);
 
 const hayCambios_jc = computed(() => Object.keys(notasEditadas_jc.value).length > 0);
 
@@ -154,18 +178,83 @@ const guardar_jc = async () => {
   }
 };
 
-const descargarActa_jc = async (tipo_jc) => {
+// ─── Reparaciones ─────────────────────────────────────────────
+
+const abrirReparacion_jc = (fila_jc) => {
+  filaReparacion_jc.value = fila_jc;
+  formularioReparacion_jc.value = {
+    id_item_jc: matriz_jc.value.plan.items_jc[0]?.id_item_jc ?? null,
+    valor_jc: null,
+    observacion_jc: '',
+  };
+  dialogoReparacion_jc.value = true;
+};
+
+const guardarReparacion_jc = async () => {
+  const escala_jc = Number(matriz_jc.value.plan.notaMaxima_jc);
+  const valor_jc = Number(formularioReparacion_jc.value.valor_jc);
+
+  if (!formularioReparacion_jc.value.id_item_jc) {
+    $q.notify({ type: 'warning', message: 'Selecciona el corte que se va a reparar.' });
+    return;
+  }
+  if (Number.isNaN(valor_jc) || valor_jc < 0 || valor_jc > escala_jc) {
+    $q.notify({
+      type: 'warning',
+      message: `La nota de la reparación debe estar entre 0 y ${escala_jc}.`,
+    });
+    return;
+  }
+
+  guardandoReparacion_jc.value = true;
+  const resultado_jc = await registrarReparacion_jc({
+    id_inscripcion_materia_jc: filaReparacion_jc.value.id_inscripcion_materia_jc,
+    id_item_jc: formularioReparacion_jc.value.id_item_jc,
+    valor_jc,
+    observacion_jc: formularioReparacion_jc.value.observacion_jc || undefined,
+  });
+  guardandoReparacion_jc.value = false;
+
+  $q.notify({
+    type: resultado_jc.exito ? 'positive' : 'negative',
+    message: resultado_jc.mensaje,
+    timeout: 5000,
+  });
+  if (resultado_jc.exito) {
+    dialogoReparacion_jc.value = false;
+    cargarMatriz_jc();
+  }
+};
+
+const quitarReparacion_jc = (reparacion_jc) => {
+  $q.dialog({
+    title: 'Eliminar reparación',
+    message: `Se eliminará la reparación de ${Number(reparacion_jc.valor_jc)} puntos. La definitiva volverá a calcularse con la nota original. ¿Continuar?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Eliminar', color: 'negative' },
+  }).onOk(async () => {
+    const resultado_jc = await eliminarReparacion_jc(reparacion_jc.id_reparacion_jc);
+    $q.notify({
+      type: resultado_jc.exito ? 'positive' : 'negative',
+      message: resultado_jc.mensaje,
+    });
+    if (resultado_jc.exito) cargarMatriz_jc();
+  });
+};
+
+// ─── Actas ────────────────────────────────────────────────────
+
+const descargarActa_jc = async () => {
   descargando_jc.value = true;
   const exito_jc = await descargarActaPdf_jc(
     materiaSeleccionada_jc.value.id_materia_cjgp,
     periodoSeleccionado_jc.value.id_periodo_cjgp,
-    tipo_jc,
   );
   descargando_jc.value = false;
   $q.notify({
     type: exito_jc ? 'positive' : 'negative',
     message: exito_jc
-      ? `Acta ${tipo_jc} generada y registrada con su hash de verificación.`
+      ? 'Acta generada y registrada con su hash de verificación.'
       : 'No se pudo generar el acta.',
   });
 };
@@ -173,8 +262,7 @@ const descargarActa_jc = async (tipo_jc) => {
 const confirmarCierre_jc = () => {
   $q.dialog({
     title: 'Cerrar acta definitiva',
-    message:
-      'Se calcularán las definitivas con el plan vigente y cada alumno quedará APROBADO o REPROBADO en su historial. ¿Continuar?',
+    message: `Se calcularán las definitivas con el plan vigente (reparaciones incluidas) y cada alumno quedará APROBADO o REPROBADO en su historial. Quienes cierren con ${notaMinimaSobresaliente_jc.value} puntos o más recibirán el Certificado de Sobresaliente. ¿Continuar?`,
     cancel: { label: 'Cancelar', flat: true },
     ok: { label: 'Cerrar acta', color: 'positive' },
     persistent: true,
@@ -186,7 +274,7 @@ const confirmarCierre_jc = () => {
     $q.notify({
       type: resultado_jc.exito ? 'positive' : 'negative',
       message: resultado_jc.mensaje,
-      timeout: 6000,
+      timeout: 8000,
     });
     if (resultado_jc.exito) cargarMatriz_jc();
   });
@@ -211,6 +299,16 @@ onMounted(async () => {
     <div class="text-h5 text-weight-bold q-mb-xs">Carga de Notas y Actas</div>
     <div class="text-caption text-grey-7 q-mb-md">
       Las columnas se generan según el plan de evaluación del período — Control de Estudios (JC)
+      <q-chip
+        v-if="autenticacion_jc.esControlEstudios_ahbb"
+        dense
+        size="sm"
+        color="teal-1"
+        text-color="teal-9"
+        icon="fact_check"
+      >
+        Control de Estudios · acceso a todas las materias
+      </q-chip>
     </div>
 
     <div class="row q-col-gutter-sm q-mb-md">
@@ -272,7 +370,7 @@ onMounted(async () => {
                   ? `${matriz_jc.materia.profesor_cjgp.nombre_ahbb} ${matriz_jc.materia.profesor_cjgp.apellido_ahbb} (${matriz_jc.materia.profesor_cjgp.cedula_ahbb})`
                   : 'sin asignar (el admin lo asigna en Carreras y Pensums)'
               }}
-              · <strong>Docente que carga:</strong> {{ autenticacion_jc.nombreCompleto_ahbb }}
+              · <strong>Quien carga:</strong> {{ autenticacion_jc.nombreCompleto_ahbb }}
               ({{ autenticacion_jc.usuarioActivo_ahbb?.cedula ?? '—' }})
             </div>
           </div>
@@ -288,7 +386,8 @@ onMounted(async () => {
         <template #avatar><q-icon name="rule" /></template>
         Plan vigente: <strong>{{ matriz_jc.plan.nombre_jc }}</strong> · Escala 0–{{ Number(matriz_jc.plan.notaMaxima_jc) }}
         · Aprobatoria {{ Number(matriz_jc.plan.notaAprobatoria_jc) }} ·
-        {{ matriz_jc.plan.items_jc.length }} evaluaciones configuradas por la coordinación.
+        {{ matriz_jc.plan.items_jc.length }} cortes configurados por la coordinación ·
+        Sobresaliente desde {{ notaMinimaSobresaliente_jc }} puntos.
       </q-banner>
 
       <q-markup-table flat bordered dense>
@@ -296,13 +395,12 @@ onMounted(async () => {
           <tr class="bg-blue-grey-1">
             <th class="text-left">Cédula</th>
             <th class="text-left">Apellidos y Nombres</th>
-            <!-- Columnas DINÁMICAS: una por cada ítem del plan -->
+            <!-- Columnas DINÁMICAS: una por cada corte del plan -->
             <th v-for="item_jc in matriz_jc.plan.items_jc" :key="item_jc.id_item_jc" class="text-center">
               {{ item_jc.nombre_jc }}<br />
-              <span class="text-caption text-grey-7">
-                {{ item_jc.esRecuperacion_jc ? 'Condición' : `${Number(item_jc.peso_jc)}%` }}
-              </span>
+              <span class="text-caption text-grey-7">{{ Number(item_jc.peso_jc) }}%</span>
             </th>
+            <th class="text-center">Reparaciones</th>
             <th class="text-center">Definitiva</th>
             <th class="text-center">Condición</th>
           </tr>
@@ -311,7 +409,13 @@ onMounted(async () => {
           <tr v-for="fila_jc in matriz_jc.filas" :key="fila_jc.id_inscripcion_materia_jc">
             <td>{{ fila_jc.alumno_jc.cedula_ahbb }}</td>
             <td>{{ fila_jc.alumno_jc.apellido_ahbb }}, {{ fila_jc.alumno_jc.nombre_ahbb }}</td>
-            <td v-for="item_jc in matriz_jc.plan.items_jc" :key="item_jc.id_item_jc" class="text-center" style="width: 90px">
+
+            <td
+              v-for="item_jc in matriz_jc.plan.items_jc"
+              :key="item_jc.id_item_jc"
+              class="text-center"
+              style="width: 96px"
+            >
               <q-input
                 :model-value="valorNota_jc(fila_jc, item_jc)"
                 type="number"
@@ -323,10 +427,55 @@ onMounted(async () => {
                 :disable="fila_jc.estatus_jc !== 'INSCRITO'"
                 @update:model-value="(valor_jc) => asignarNota_jc(fila_jc, item_jc, valor_jc)"
               />
+              <!-- Si el corte fue reparado, se muestra la nota que realmente pondera -->
+              <q-chip
+                v-if="reparacionDe_jc(fila_jc, item_jc)"
+                dense
+                size="sm"
+                color="blue-1"
+                text-color="blue-9"
+                icon="autorenew"
+                class="q-mt-xs"
+                clickable
+                @click="quitarReparacion_jc(reparacionDe_jc(fila_jc, item_jc))"
+              >
+                R: {{ Number(reparacionDe_jc(fila_jc, item_jc).valor_jc) }}
+                <q-tooltip>
+                  Reparación registrada por
+                  {{ reparacionDe_jc(fila_jc, item_jc).registradoPor_jc?.nombre_ahbb ?? '—' }}
+                  {{ reparacionDe_jc(fila_jc, item_jc).registradoPor_jc?.apellido_ahbb ?? '' }}.
+                  Cuenta {{ notaEfectiva_jc(fila_jc, item_jc) }}. Clic para eliminarla.
+                </q-tooltip>
+              </q-chip>
             </td>
+
+            <td class="text-center">
+              <q-btn
+                flat
+                dense
+                size="sm"
+                color="blue-8"
+                icon="autorenew"
+                :label="String((fila_jc.reparaciones_jc ?? []).length)"
+                :disable="fila_jc.estatus_jc !== 'INSCRITO'"
+                @click="abrirReparacion_jc(fila_jc)"
+              >
+                <q-tooltip>Registrar la reparación de un corte</q-tooltip>
+              </q-btn>
+            </td>
+
             <td class="text-center text-weight-bold">
               {{ definitivaEnVivo_jc(fila_jc) }}
+              <q-icon
+                v-if="definitivaEnVivo_jc(fila_jc) >= notaMinimaSobresaliente_jc"
+                name="military_tech"
+                color="amber-8"
+                size="18px"
+              >
+                <q-tooltip>Rango de excelencia: recibirá el Certificado de Sobresaliente al cerrar el acta.</q-tooltip>
+              </q-icon>
             </td>
+
             <td class="text-center">
               <q-chip
                 v-if="fila_jc.estatus_jc !== 'INSCRITO'"
@@ -363,17 +512,9 @@ onMounted(async () => {
           outline
           color="blue-grey-8"
           icon="description"
-          label="Acta Blanca (PDF)"
+          label="Acta oficial (PDF)"
           :loading="descargando_jc"
-          @click="descargarActa_jc('BLANCA')"
-        />
-        <q-btn
-          outline
-          color="green-9"
-          icon="verified_user"
-          label="Acta Verde (PDF)"
-          :loading="descargando_jc"
-          @click="descargarActa_jc('VERDE')"
+          @click="descargarActa_jc"
         />
         <q-btn
           color="positive"
@@ -398,5 +539,70 @@ onMounted(async () => {
         No hay materias con alumnos inscritos en este período.
       </template>
     </div>
+
+    <!-- Diálogo: registrar la reparación de un corte -->
+    <q-dialog v-model="dialogoReparacion_jc">
+      <q-card style="min-width: 460px; max-width: 92vw">
+        <q-card-section class="row items-center q-pb-none">
+          <q-avatar color="blue-8" text-color="white" icon="autorenew" size="34px" class="q-mr-sm" />
+          <div>
+            <div class="text-subtitle1 text-weight-bold">Registrar reparación</div>
+            <div class="text-caption text-grey-7" v-if="filaReparacion_jc">
+              {{ filaReparacion_jc.alumno_jc.apellido_ahbb }},
+              {{ filaReparacion_jc.alumno_jc.nombre_ahbb }}
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-banner dense rounded class="bg-blue-1 text-blue-9 q-mb-md">
+            <template #avatar><q-icon name="info" /></template>
+            Puedes reparar el corte que necesites. La nota que cuenta para la definitiva será
+            la <strong>mejor</strong> entre la original y la de reparación.
+          </q-banner>
+
+          <q-select
+            v-model="formularioReparacion_jc.id_item_jc"
+            :options="matriz_jc?.plan.items_jc ?? []"
+            option-label="nombre_jc"
+            option-value="id_item_jc"
+            emit-value
+            map-options
+            label="Corte a reparar *"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+          <q-input
+            v-model.number="formularioReparacion_jc.valor_jc"
+            type="number"
+            :min="0"
+            :max="Number(matriz_jc?.plan.notaMaxima_jc ?? 20)"
+            step="0.25"
+            :label="`Nota de la reparación (0 a ${Number(matriz_jc?.plan.notaMaxima_jc ?? 20)}) *`"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+          <q-input
+            v-model="formularioReparacion_jc.observacion_jc"
+            label="Observación (opcional)"
+            outlined
+            dense
+            autogrow
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" v-close-popup />
+          <q-btn
+            color="primary"
+            label="Registrar reparación"
+            :loading="guardandoReparacion_jc"
+            @click="guardarReparacion_jc"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>

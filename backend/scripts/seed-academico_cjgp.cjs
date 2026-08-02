@@ -6,7 +6,7 @@
  *   - Períodos 2026-I (cerrado) y 2026-II (activo).
  *   - Carrera "Ingeniería en Informática" (semestral, 3 años, 6 bloques)
  *     con 12 materias y su cadena de prelaciones.
- *   - Plan de Evaluación Institucional 2026-II (4 cortes de 25% + Reparación).
+ *   - Plan de Evaluación Institucional 2026-II (4 cortes de 25%).
  *   - Historial aprobado del bloque 1 para la alumna María (desbloquea bloque 2).
  *   - Inscripciones vigentes con notas parciales para probar la carga de notas.
  *
@@ -48,6 +48,10 @@ async function limpiarModuloAcademico() {
   await prisma.td_plantilla_plan_ga.deleteMany();
   await prisma.td_acta_jc.deleteMany();
   await prisma.td_calificacion_jc.deleteMany();
+  await prisma.td_certificado_sobresaliente_jc.deleteMany();
+  await prisma.td_notificacion_jc.deleteMany();
+  await prisma.td_auditoria_jc.deleteMany();
+  await prisma.td_reparacion_jc.deleteMany();
   await prisma.td_plan_evaluacion_jc.deleteMany(); // cascada: ítems
   await prisma.td_inscripcion_materia_cjgp.deleteMany();
   await prisma.td_prelacion_cjgp.deleteMany();
@@ -78,6 +82,27 @@ async function main() {
     await limpiarModuloAcademico();
   }
   console.log('Sembrando datos académicos de demostración (_cjgp / _jc)...');
+
+  // ── Usuario del rol Control de Estudios ─────────────────────────
+  // Se crea aquí (además del bootstrap) para que las bases de datos ya
+  // existentes también dispongan de la cuenta operativa del módulo _jc.
+  const bcrypt = require('bcrypt');
+  const usuarioControl = await prisma.td_usuario_ahbb.upsert({
+    where: { correo_ahbb: 'control@academiah-b.edu' },
+    update: { rol_ahbb: 'CONTROL_ESTUDIOS', estadoCuenta_ahbb: 'ACTIVO' },
+    create: {
+      cedula_ahbb: 'V-10000005',
+      nombre_ahbb: 'Sofia',
+      apellido_ahbb: 'Rangel',
+      correo_ahbb: 'control@academiah-b.edu',
+      contrasena_ahbb: await bcrypt.hash('control123', 10),
+      rol_ahbb: 'CONTROL_ESTUDIOS',
+      estadoCuenta_ahbb: 'ACTIVO',
+    },
+  });
+  console.log(
+    `Cuenta de Control de Estudios lista: ${usuarioControl.correo_ahbb} / control123`,
+  );
 
   // ── Períodos académicos ─────────────────────────────────────────
   const periodoAnterior = await prisma.td_periodo_academico_cjgp.upsert({
@@ -205,13 +230,14 @@ async function main() {
             { nombre_jc: 'Corte 2', orden_jc: 2, peso_jc: 25 },
             { nombre_jc: 'Corte 3', orden_jc: 3, peso_jc: 25 },
             { nombre_jc: 'Corte 4', orden_jc: 4, peso_jc: 25 },
-            { nombre_jc: 'Reparación', orden_jc: 5, peso_jc: 0, esRecuperacion_jc: true },
           ],
         },
       },
       include: { items_jc: true },
     });
-    console.log('Plan Institucional 2026-II publicado (4 cortes de 25% + Reparación).');
+    // Las reparaciones ya no forman parte del plan: se registran por corte
+    // durante la carga de notas (ver ReparacionesService_jc).
+    console.log('Plan Institucional 2026-II publicado (4 cortes de 25%).');
   }
 
   // ── Alumnos de demostración ─────────────────────────────────────
@@ -252,9 +278,7 @@ async function main() {
   );
 
   // ── Inscripciones 2026-II con notas parciales (Corte 1 y 2) ─────
-  const itemsRegulares = plan.items_jc
-    .filter((item) => !item.esRecuperacion_jc)
-    .sort((a, b) => a.orden_jc - b.orden_jc);
+  const itemsRegulares = [...plan.items_jc].sort((a, b) => a.orden_jc - b.orden_jc);
 
   const notaAleatoria = () => Math.round((8 + Math.random() * 11) * 100) / 100;
 

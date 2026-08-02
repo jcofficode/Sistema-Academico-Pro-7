@@ -6,9 +6,10 @@ import { ROLES_AHBB } from '../constantes/roles_ahbb';
 
 // Alias para los roles (brevedad en definición de rutas)
 const ADMIN = ROLES_AHBB.ADMINISTRADOR;
+const CTRL = ROLES_AHBB.CONTROL_ESTUDIOS;
 const PROF = ROLES_AHBB.PROFESOR;
 const ALUM = ROLES_AHBB.ALUMNO;
-const TODOS = [ADMIN, PROF, ALUM];
+const TODOS = [ADMIN, CTRL, PROF, ALUM];
 
 const routes = [
   // ─── Rutas públicas ─────────────────────────────────
@@ -136,7 +137,7 @@ const routes = [
     path: '/admin/carreras',
     name: 'adminCarreras',
     component: () => import('pages/admin/CarrerasView_cjgp.vue'),
-    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN, CTRL] },
   },
   {
     path: '/admin/carreras/asistente',
@@ -148,7 +149,7 @@ const routes = [
     path: '/admin/periodos',
     name: 'adminPeriodos',
     component: () => import('pages/admin/PeriodosView_cjgp.vue'),
-    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN, CTRL] },
   },
   {
     path: '/admin/inscripcion-alumnos',
@@ -193,6 +194,13 @@ const routes = [
     meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
   },
 
+  {
+    path: '/alumno/certificados-sobresaliente',
+    name: 'alumnoCertificadosSobresaliente',
+    component: () => import('pages/alumno/MisCertificadosSobresalienteView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ALUM] },
+  },
+
   // ─── Módulo Control de Estudios (_jc) ──────────────────
   {
     path: '/admin/planes-evaluacion',
@@ -204,13 +212,47 @@ const routes = [
     path: '/admin/control-estudios',
     name: 'adminControlEstudios',
     component: () => import('pages/admin/ControlEstudiosAdminView_jc.vue'),
-    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN, CTRL] },
   },
   {
+    // Consulta de solo lectura: el administrador supervisa las notas
+    path: '/admin/consulta-notas',
+    name: 'adminConsultaNotas',
+    component: () => import('pages/admin/ConsultaNotasView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN, CTRL] },
+  },
+  {
+    // Carga de notas: profesor y Control de Estudios (el admin NO)
     path: '/control-estudios/carga-notas',
     name: 'cargaNotas',
     component: () => import('pages/profesor/CargaNotasView_jc.vue'),
-    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, ADMIN] },
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, CTRL] },
+  },
+  {
+    path: '/control-estudios/auditoria',
+    name: 'auditoriaControlEstudios',
+    component: () => import('pages/control-estudios/AuditoriaControlEstudiosView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [CTRL, ADMIN] },
+  },
+  {
+    path: '/control-estudios/certificados-sobresaliente',
+    name: 'certificadosSobresalienteControl',
+    component: () => import('pages/control-estudios/CertificadosSobresalienteView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [CTRL, ADMIN] },
+  },
+
+  // ─── Seguridad del sistema: RBAC y auditoría general (_jc) ───
+  {
+    path: '/admin/rbac',
+    name: 'adminRbac',
+    component: () => import('pages/admin/RolesAccesosView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
+    path: '/admin/auditoria',
+    name: 'adminAuditoria',
+    component: () => import('pages/admin/AuditoriaSistemaView_jc.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
   },
 
   // ─── Módulo Plan de Estudio (_ga) ────────────────────────

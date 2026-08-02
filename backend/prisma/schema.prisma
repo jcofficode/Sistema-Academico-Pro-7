@@ -43,6 +43,14 @@ model td_usuario_ahbb {
   calificacionesCargadas_jc  td_calificacion_jc[]
   actasGeneradas_jc          td_acta_jc[]
 
+  // Relaciones Módulo Control de Estudios (_jc) — ampliación
+  reparacionesRegistradas_jc    td_reparacion_jc[]
+  certificadosSobresaliente_jc  td_certificado_sobresaliente_jc[] @relation("AlumnoCertificadoSobresaliente")
+  certificadosEmitidos_jc       td_certificado_sobresaliente_jc[] @relation("EmisorCertificadoSobresaliente")
+  notificaciones_jc             td_notificacion_jc[]
+  auditorias_jc                 td_auditoria_jc[]                 @relation("AutorAuditoria")
+  auditoriasRecibidas_jc        td_auditoria_jc[]                 @relation("AfectadoAuditoria")
+
   // Relaciones Módulo Multimedia y Videollamadas (_jf)
   progresosMultimedia_jf     td_progreso_lecciones_jf[]
   intentosMultimedia_jf      td_intento_evaluacion_jf[]
@@ -363,6 +371,8 @@ model td_inscripcion_materia_cjgp {
   materia_cjgp  td_materia_cjgp           @relation(fields: [id_materia_im_cjgp], references: [id_materia_cjgp], onDelete: Cascade)
   periodo_cjgp  td_periodo_academico_cjgp @relation(fields: [id_periodo_im_cjgp], references: [id_periodo_cjgp], onDelete: Cascade)
   calificaciones_jc td_calificacion_jc[]
+  reparaciones_jc   td_reparacion_jc[]
+  certificadoSobresaliente_jc td_certificado_sobresaliente_jc?
 
   // Un alumno solo puede cursar una vez la misma materia dentro de un período
   @@unique([id_usuario_im_cjgp, id_materia_im_cjgp, id_periodo_im_cjgp])
@@ -399,20 +409,22 @@ model td_plan_evaluacion_jc {
   @@unique([id_periodo_plan_jc, id_carrera_plan_jc])
 }
 
-// Cada hito de evaluación configurable: "Corte 1", "Módulo A", "Reparación"...
+// Cada hito de evaluación configurable: "Corte 1", "Módulo A", "Parcial"...
+// El plan define ÚNICAMENTE cortes evaluables: sus pesos suman siempre 100 %.
+// Las reparaciones ya no se configuran aquí; se registran por corte durante la
+// carga de notas (ver td_reparacion_jc).
 model td_item_evaluacion_jc {
   id_item_jc      Int     @id @default(autoincrement())
   nombre_jc       String  @db.VarChar(100)
   orden_jc        Int
-  // Peso porcentual del ítem sobre la definitiva (los de recuperación no suman)
+  // Peso porcentual del corte sobre la definitiva
   peso_jc         Decimal @db.Decimal(5, 2)
-  // true = condición especial tipo "Reparación": sustituye la definitiva reprobada
-  esRecuperacion_jc Boolean @default(false)
   id_plan_item_jc Int
 
   // Relaciones
   plan_jc          td_plan_evaluacion_jc @relation(fields: [id_plan_item_jc], references: [id_plan_jc], onDelete: Cascade)
   calificaciones_jc td_calificacion_jc[]
+  reparaciones_jc   td_reparacion_jc[]
 
   // Relaciones Módulo Plan de Estudio (_ga)
   unidadesPlan_ga   td_unidad_ga[]
@@ -443,8 +455,9 @@ model td_calificacion_jc {
 model td_acta_jc {
   id_acta_jc              Int      @id @default(autoincrement())
   codigo_jc               String   @unique @db.VarChar(60)
-  // BLANCA (auditoría tabular) | VERDE (alta seguridad para llenado manual)
-  tipo_jc                 String   @db.VarChar(10)
+  // BLANCA — única modalidad vigente (el acta verde fue descontinuada).
+  // La columna se conserva para no perder la trazabilidad de actas históricas.
+  tipo_jc                 String   @default("BLANCA") @db.VarChar(10)
   // Hash SHA-256 del contenido: garantiza que el respaldo digital coincida con el físico
   hashVerificacion_jc     String   @db.VarChar(64)
   id_materia_acta_jc      Int
@@ -456,6 +469,117 @@ model td_acta_jc {
   materia_jc     td_materia_cjgp           @relation(fields: [id_materia_acta_jc], references: [id_materia_cjgp], onDelete: Cascade)
   periodo_jc     td_periodo_academico_cjgp @relation(fields: [id_periodo_acta_jc], references: [id_periodo_cjgp], onDelete: Cascade)
   generadaPor_jc td_usuario_ahbb           @relation(fields: [generadaPorUsuarioId_jc], references: [id_usuario_ahbb])
+}
+
+// ── Reparación de un corte ────────────────────────────────────
+// La reparación NO se configura en el plan: el docente (o Control de
+// Estudios) la registra durante la carga de notas sobre un corte concreto.
+// La nota efectiva del corte pasa a ser MAX(nota original, reparación).
+model td_reparacion_jc {
+  id_reparacion_jc              Int      @id @default(autoincrement())
+  valor_jc                      Decimal  @db.Decimal(5, 2)
+  observacion_jc                String?  @db.VarChar(250)
+  id_inscripcion_materia_rep_jc Int
+  id_item_rep_jc                Int
+  registradoPorUsuarioId_jc     Int?
+  creadoEn_jc                   DateTime? @default(now()) @db.Timestamp(6)
+  actualizadoEn_jc              DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inscripcionMateria_jc td_inscripcion_materia_cjgp @relation(fields: [id_inscripcion_materia_rep_jc], references: [id_inscripcion_materia_cjgp], onDelete: Cascade)
+  item_jc               td_item_evaluacion_jc       @relation(fields: [id_item_rep_jc], references: [id_item_jc], onDelete: Cascade)
+  registradoPor_jc      td_usuario_ahbb?            @relation(fields: [registradoPorUsuarioId_jc], references: [id_usuario_ahbb])
+
+  // Una sola reparación por alumno y por corte
+  @@unique([id_inscripcion_materia_rep_jc, id_item_rep_jc])
+}
+
+// ── Certificado de Sobresaliente ──────────────────────────────
+// Se emite automáticamente al cerrar el acta cuando la definitiva del
+// alumno queda dentro del rango de excelencia (17 a 20 puntos).
+model td_certificado_sobresaliente_jc {
+  id_certificado_sob_jc         Int      @id @default(autoincrement())
+  codigo_jc                     String   @unique @db.VarChar(60)
+  notaFinal_jc                  Decimal  @db.Decimal(5, 2)
+  hashVerificacion_jc           String   @db.VarChar(64)
+  id_inscripcion_materia_cer_jc Int      @unique
+  id_alumno_cer_jc              Int
+  emitidoPorUsuarioId_jc        Int?
+  anulado_jc                    Boolean  @default(false)
+  creadoEn_jc                   DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  inscripcionMateria_jc td_inscripcion_materia_cjgp @relation(fields: [id_inscripcion_materia_cer_jc], references: [id_inscripcion_materia_cjgp], onDelete: Cascade)
+  alumno_jc             td_usuario_ahbb             @relation("AlumnoCertificadoSobresaliente", fields: [id_alumno_cer_jc], references: [id_usuario_ahbb], onDelete: Cascade)
+  emitidoPor_jc         td_usuario_ahbb?            @relation("EmisorCertificadoSobresaliente", fields: [emitidoPorUsuarioId_jc], references: [id_usuario_ahbb])
+
+  @@index([id_alumno_cer_jc])
+}
+
+// ── Notificaciones al usuario ─────────────────────────────────
+// Bandeja interna: felicitaciones por sobresaliente, avisos de notas, etc.
+model td_notificacion_jc {
+  id_notificacion_jc  Int      @id @default(autoincrement())
+  titulo_jc           String   @db.VarChar(150)
+  mensaje_jc          String   @db.Text
+  // FELICITACION | INFORMATIVA | ADVERTENCIA
+  tipo_jc             String   @default("INFORMATIVA") @db.VarChar(30)
+  icono_jc            String?  @db.VarChar(60)
+  enlace_jc           String?  @db.VarChar(250)
+  leida_jc            Boolean  @default(false)
+  id_usuario_not_jc   Int
+  creadoEn_jc         DateTime? @default(now()) @db.Timestamp(6)
+
+  usuario_jc td_usuario_ahbb @relation(fields: [id_usuario_not_jc], references: [id_usuario_ahbb], onDelete: Cascade)
+
+  @@index([id_usuario_not_jc, leida_jc])
+}
+
+// ── Bitácora de auditoría del sistema ─────────────────────────
+// Registra QUIÉN hizo QUÉ, CUÁNDO y SOBRE QUIÉN. La alimentan dos fuentes:
+//  1. El interceptor global (toda petición que modifica datos).
+//  2. Los servicios de negocio, que añaden el contexto académico
+//     (materia, período, alumno afectado) que la petición HTTP no conoce.
+model td_auditoria_jc {
+  id_auditoria_jc      Int      @id @default(autoincrement())
+  // CONTROL_ESTUDIOS | SEGURIDAD | USUARIOS | ACADEMICO | PAGOS | SISTEMA
+  modulo_jc            String   @db.VarChar(40)
+  // Código estable de la acción: NOTAS_CARGADAS, ACTA_EMITIDA, ROL_ASIGNADO...
+  accion_jc            String   @db.VarChar(60)
+  // Frase legible ya construida para mostrarse en pantalla
+  descripcion_jc       String   @db.Text
+  // EXITO | ERROR
+  resultado_jc         String   @default("EXITO") @db.VarChar(15)
+
+  // Autor de la acción (se guarda el nombre y rol para que sobreviva a borrados)
+  id_usuario_auditoria_jc Int?
+  nombreUsuario_jc     String?  @db.VarChar(200)
+  rolUsuario_jc        String?  @db.VarChar(30)
+
+  // Sujeto afectado y contexto académico (opcionales)
+  id_afectado_jc       Int?
+  id_materia_aud_jc    Int?
+  id_periodo_aud_jc    Int?
+  entidad_jc           String?  @db.VarChar(60)
+  id_entidad_jc        Int?
+
+  // Datos técnicos de la petición
+  metodo_jc            String?  @db.VarChar(10)
+  ruta_jc              String?  @db.VarChar(250)
+  estadoHttp_jc        Int?
+  duracionMs_jc        Int?
+  ip_jc                String?  @db.VarChar(60)
+  detalle_jc           Json?
+
+  creadoEn_jc          DateTime @default(now()) @db.Timestamp(6)
+
+  // Relaciones
+  usuario_jc  td_usuario_ahbb? @relation("AutorAuditoria", fields: [id_usuario_auditoria_jc], references: [id_usuario_ahbb], onDelete: SetNull)
+  afectado_jc td_usuario_ahbb? @relation("AfectadoAuditoria", fields: [id_afectado_jc], references: [id_usuario_ahbb], onDelete: SetNull)
+
+  @@index([modulo_jc, creadoEn_jc])
+  @@index([id_usuario_auditoria_jc])
+  @@index([accion_jc])
 }
 
 // ══════════════════════════════════════════════════════════════

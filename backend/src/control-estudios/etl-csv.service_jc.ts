@@ -380,21 +380,21 @@ export class EtlCsvService_jc {
         idCarrera_jc = carrera_jc.id_carrera_cjgp;
       }
 
+      // El plan solo admite CORTES: las reparaciones se registran durante la
+      // carga de notas, no se configuran en el plan.
       const items_jc = filasPlan_jc.map((fila_jc) => ({
         nombre_jc: fila_jc.evaluacion,
         orden_jc: Number(fila_jc.orden),
         peso_jc: Number(fila_jc.peso),
-        esRecuperacion_jc: ['SI', 'SÍ', 'TRUE', '1'].includes(
-          (fila_jc.es_recuperacion ?? '').toUpperCase(),
-        ),
       }));
 
-      const sumaPesos_jc = items_jc
-        .filter((item_jc) => !item_jc.esRecuperacion_jc)
-        .reduce((suma_jc, item_jc) => suma_jc + item_jc.peso_jc, 0);
+      const sumaPesos_jc = items_jc.reduce(
+        (suma_jc, item_jc) => suma_jc + item_jc.peso_jc,
+        0,
+      );
       if (Math.abs(sumaPesos_jc - 100) > 0.01) {
         errores_jc.push(
-          `Plan "${nombrePlan_jc}": los pesos regulares suman ${sumaPesos_jc}% (deben sumar 100%).`,
+          `Plan "${nombrePlan_jc}": los pesos de los cortes suman ${sumaPesos_jc}% (deben sumar 100%).`,
         );
         continue;
       }

@@ -1,10 +1,13 @@
 <!--
   PlanesEvaluacionView_jc.vue — Admin UI del Esquema de Evaluación Parametrizado.
 
-  La coordinación define aquí cuántas evaluaciones hay, sus nombres, pesos y
-  condiciones (ej. "Reparación"). El resto del sistema (matriz del docente,
-  cálculo de definitivas y actas) se genera a partir de esta configuración,
-  sin intervención del programador (Desarrollo Basado en Metadatos).
+  La coordinación define aquí cuántos CORTES hay, sus nombres y sus pesos.
+  El resto del sistema (matriz del docente, cálculo de definitivas y actas) se
+  genera a partir de esta configuración, sin intervención del programador
+  (Desarrollo Basado en Metadatos).
+
+  Las reparaciones ya NO se configuran aquí: las registra por corte quien carga
+  las notas (profesor o Control de Estudios) desde la matriz de calificaciones.
 -->
 <script setup>
 import { ref, computed, onMounted } from 'vue';
@@ -40,11 +43,12 @@ const formulario_jc = ref({
   items_jc: [],
 });
 
-// La suma de pesos regulares debe dar 100% (validación en vivo)
+// La suma de los pesos de los cortes debe dar 100% (validación en vivo)
 const sumaPesos_jc = computed(() =>
-  formulario_jc.value.items_jc
-    .filter((item_jc) => !item_jc.esRecuperacion_jc)
-    .reduce((suma_jc, item_jc) => suma_jc + Number(item_jc.peso_jc || 0), 0),
+  formulario_jc.value.items_jc.reduce(
+    (suma_jc, item_jc) => suma_jc + Number(item_jc.peso_jc || 0),
+    0,
+  ),
 );
 const pesosValidos_jc = computed(() => Math.abs(sumaPesos_jc.value - 100) < 0.01);
 
@@ -57,10 +61,10 @@ const abrirCreacion_jc = () => {
     notaMaxima_jc: 20,
     notaAprobatoria_jc: 10,
     items_jc: [
-      { nombre_jc: 'Corte 1', orden_jc: 1, peso_jc: 25, esRecuperacion_jc: false },
-      { nombre_jc: 'Corte 2', orden_jc: 2, peso_jc: 25, esRecuperacion_jc: false },
-      { nombre_jc: 'Corte 3', orden_jc: 3, peso_jc: 25, esRecuperacion_jc: false },
-      { nombre_jc: 'Corte 4', orden_jc: 4, peso_jc: 25, esRecuperacion_jc: false },
+      { nombre_jc: 'Corte 1', orden_jc: 1, peso_jc: 25 },
+      { nombre_jc: 'Corte 2', orden_jc: 2, peso_jc: 25 },
+      { nombre_jc: 'Corte 3', orden_jc: 3, peso_jc: 25 },
+      { nombre_jc: 'Corte 4', orden_jc: 4, peso_jc: 25 },
     ],
   };
   dialogoPlan_jc.value = true;
@@ -78,7 +82,6 @@ const abrirEdicion_jc = (plan_jc) => {
       nombre_jc: item_jc.nombre_jc,
       orden_jc: item_jc.orden_jc,
       peso_jc: Number(item_jc.peso_jc),
-      esRecuperacion_jc: item_jc.esRecuperacion_jc,
     })),
   };
   dialogoPlan_jc.value = true;
@@ -89,7 +92,6 @@ const agregarItem_jc = () => {
     nombre_jc: '',
     orden_jc: formulario_jc.value.items_jc.length + 1,
     peso_jc: 0,
-    esRecuperacion_jc: false,
   });
 };
 
@@ -221,11 +223,10 @@ onMounted(cargar_jc);
               :key="item_jc.id_item_jc"
               dense
               size="sm"
-              :color="item_jc.esRecuperacion_jc ? 'deep-orange-1' : 'blue-1'"
-              :text-color="item_jc.esRecuperacion_jc ? 'deep-orange-9' : 'blue-9'"
+              color="blue-1"
+              text-color="blue-9"
             >
-              {{ item_jc.nombre_jc }}
-              {{ item_jc.esRecuperacion_jc ? '(condición)' : `${Number(item_jc.peso_jc)}%` }}
+              {{ item_jc.nombre_jc }} {{ Number(item_jc.peso_jc) }}%
             </q-chip>
           </q-card-section>
 
@@ -302,13 +303,20 @@ onMounted(cargar_jc);
           <q-separator class="q-my-sm" />
 
           <div class="row items-center">
-            <div class="text-subtitle2 text-weight-bold">Evaluaciones del plan</div>
+            <div class="text-subtitle2 text-weight-bold">Cortes del plan</div>
             <q-space />
             <q-chip dense :color="pesosValidos_jc ? 'green-1' : 'red-1'" :text-color="pesosValidos_jc ? 'green-9' : 'red-9'">
-              Σ pesos regulares: {{ sumaPesos_jc }}%
+              Σ pesos: {{ sumaPesos_jc }}%
             </q-chip>
             <q-btn flat dense color="primary" icon="add" label="Agregar" @click="agregarItem_jc" />
           </div>
+
+          <q-banner dense rounded class="bg-blue-1 text-blue-9 q-mb-sm">
+            <template #avatar><q-icon name="info" /></template>
+            El plan define únicamente los <strong>cortes evaluables</strong> y sus pesos deben
+            sumar 100 %. Las <strong>reparaciones</strong> ya no se configuran aquí: el profesor o
+            Control de Estudios las registran por corte al cargar las notas.
+          </q-banner>
 
           <div
             v-for="(item_jc, indice_jc) in formulario_jc.items_jc"
@@ -316,12 +324,9 @@ onMounted(cargar_jc);
             class="row q-col-gutter-xs items-center q-mb-xs"
           >
             <div class="col-1"><q-input v-model.number="item_jc.orden_jc" type="number" dense outlined label="#" /></div>
-            <div class="col-5"><q-input v-model="item_jc.nombre_jc" dense outlined label="Nombre (ej. Corte 1, Módulo A)" /></div>
-            <div class="col-2">
-              <q-input v-model.number="item_jc.peso_jc" type="number" dense outlined label="Peso %" :disable="item_jc.esRecuperacion_jc" />
-            </div>
+            <div class="col-7"><q-input v-model="item_jc.nombre_jc" dense outlined label="Nombre del corte (ej. Corte 1, Módulo A)" /></div>
             <div class="col-3">
-              <q-toggle v-model="item_jc.esRecuperacion_jc" dense label="Reparación" @update:model-value="item_jc.esRecuperacion_jc && (item_jc.peso_jc = 0)" />
+              <q-input v-model.number="item_jc.peso_jc" type="number" dense outlined label="Peso %" />
             </div>
             <div class="col-1">
               <q-btn flat round dense size="sm" color="negative" icon="close" @click="quitarItem_jc(indice_jc)" />

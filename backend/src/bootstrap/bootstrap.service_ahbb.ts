@@ -44,11 +44,13 @@ export class BootstrapService_ahbb implements OnModuleInit {
       return { admin, profesores, alumnos };
     }
 
-    const [adminHash_ahbb, profHash_ahbb, alumHash_ahbb] = await Promise.all([
-      bcrypt.hash('admin123', 10),
-      bcrypt.hash('prof123', 10),
-      bcrypt.hash('alum123', 10),
-    ]);
+    const [adminHash_ahbb, profHash_ahbb, alumHash_ahbb, controlHash_ahbb] =
+      await Promise.all([
+        bcrypt.hash('admin123', 10),
+        bcrypt.hash('prof123', 10),
+        bcrypt.hash('alum123', 10),
+        bcrypt.hash('control123', 10),
+      ]);
 
     const usuarios_creados = await this.prisma_ahbb.$transaction([
       // 1 Admin
@@ -64,9 +66,12 @@ export class BootstrapService_ahbb implements OnModuleInit {
       this.prisma_ahbb.td_usuario_ahbb.create({ data: { cedula_ahbb: 'V-20000002', nombre_ahbb: 'Javier', apellido_ahbb: 'Silva', correo_ahbb: 'javier@estudiante.edu', contrasena_ahbb: alumHash_ahbb, rol_ahbb: 'ALUMNO', estadoCuenta_ahbb: 'ACTIVO', requiereCambioContrasena_ahbb: false } }),
       this.prisma_ahbb.td_usuario_ahbb.create({ data: { cedula_ahbb: 'V-20000003', nombre_ahbb: 'Elena', apellido_ahbb: 'Rojas', correo_ahbb: 'elena@estudiante.edu', contrasena_ahbb: alumHash_ahbb, rol_ahbb: 'ALUMNO', estadoCuenta_ahbb: 'ACTIVO', requiereCambioContrasena_ahbb: false } }),
       this.prisma_ahbb.td_usuario_ahbb.create({ data: { cedula_ahbb: 'V-20000004', nombre_ahbb: 'Diego', apellido_ahbb: 'Perez', correo_ahbb: 'diego@estudiante.edu', contrasena_ahbb: alumHash_ahbb, rol_ahbb: 'ALUMNO', estadoCuenta_ahbb: 'ACTIVO', requiereCambioContrasena_ahbb: false } }),
+
+      // 1 Control de Estudios (rol operativo del módulo _jc)
+      this.prisma_ahbb.td_usuario_ahbb.create({ data: { cedula_ahbb: 'V-10000005', nombre_ahbb: 'Sofia', apellido_ahbb: 'Rangel', correo_ahbb: 'control@academiah-b.edu', contrasena_ahbb: controlHash_ahbb, rol_ahbb: 'CONTROL_ESTUDIOS', estadoCuenta_ahbb: 'ACTIVO' } }),
     ]);
 
-    this.logger.log('Usuarios base creados: 1 Admin, 3 Profesores, 4 Alumnos.');
+    this.logger.log('Usuarios base creados: 1 Admin, 1 Control de Estudios, 3 Profesores, 4 Alumnos.');
     
     return {
       admin: usuarios_creados[0],

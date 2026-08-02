@@ -10,24 +10,32 @@ import { CrearPlanEvaluacionDto_jc } from './dto/crear-plan-evaluacion.dto_jc';
  * PlanesEvaluacionService_jc — Esquema de Evaluación Parametrizado.
  *
  * Enfoque de Desarrollo Basado en Metadatos: el número de cortes, sus
- * nombres, sus pesos y las condiciones especiales (ej. "Reparación")
- * viven en la base de datos. El resto del módulo (carga de notas,
- * cálculo de definitivas, actas) se limita a leer esta configuración,
- * por lo que la coordinación puede agregar opciones sin tocar el código.
+ * nombres y sus pesos viven en la base de datos. El resto del módulo (carga
+ * de notas, cálculo de definitivas, actas) se limita a leer esta
+ * configuración, por lo que la coordinación puede cambiar el esquema de
+ * evaluación sin tocar el código.
+ *
+ * El plan describe únicamente CORTES evaluables. Las reparaciones no se
+ * configuran aquí: se registran por corte durante la carga de notas
+ * (ver ReparacionesService_jc).
  */
 @Injectable()
 export class PlanesEvaluacionService_jc {
   constructor(private readonly prisma_jc: PrismaService) {}
 
-  /** Los pesos de los ítems regulares (no recuperación) deben sumar 100%. */
+  /**
+   * Los pesos de los cortes deben sumar 100%. Ya no hay ítems exentos: las
+   * reparaciones se registran durante la carga de notas, no en el plan.
+   */
   private validarPesos_jc(datos_jc: CrearPlanEvaluacionDto_jc) {
-    const sumaPesos_jc = datos_jc.items_jc
-      .filter((item_jc) => !item_jc.esRecuperacion_jc)
-      .reduce((suma_jc, item_jc) => suma_jc + Number(item_jc.peso_jc), 0);
+    const sumaPesos_jc = datos_jc.items_jc.reduce(
+      (suma_jc, item_jc) => suma_jc + Number(item_jc.peso_jc),
+      0,
+    );
 
     if (Math.abs(sumaPesos_jc - 100) > 0.01) {
       throw new BadRequestException(
-        `Los pesos de las evaluaciones regulares deben sumar 100% (actualmente suman ${sumaPesos_jc}%).`,
+        `Los pesos de los cortes deben sumar 100% (actualmente suman ${sumaPesos_jc}%).`,
       );
     }
 
@@ -142,7 +150,6 @@ export class PlanesEvaluacionService_jc {
             nombre_jc: item_jc.nombre_jc.trim(),
             orden_jc: item_jc.orden_jc,
             peso_jc: item_jc.peso_jc,
-            esRecuperacion_jc: item_jc.esRecuperacion_jc ?? false,
           })),
         },
       },
@@ -189,7 +196,6 @@ export class PlanesEvaluacionService_jc {
               nombre_jc: item_jc.nombre_jc.trim(),
               orden_jc: item_jc.orden_jc,
               peso_jc: item_jc.peso_jc,
-              esRecuperacion_jc: item_jc.esRecuperacion_jc ?? false,
             })),
           },
         },

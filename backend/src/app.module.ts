@@ -17,9 +17,14 @@ import { ControlEstudiosModule_jc } from './control-estudios/control-estudios.mo
 import { MultimediaModule_jf } from './multimedia/multimedia.module_jf';
 import { PagosModule_ap } from './pagos/pagos.module_ap';
 import { PlanEstudioModule_ga } from './plan-estudio/plan-estudio.module_ga';
+import { AuditoriaModule_jc } from './auditoria/auditoria.module_jc';
+import { RbacModule_jc } from './rbac/rbac.module_jc';
 
 @Module({
   imports: [
+    // Transversal: debe ir primero para que su interceptor cubra al resto
+    AuditoriaModule_jc,
+    RbacModule_jc,
     UsuariosModule,
     AuthModule,
     CursosModule,

@@ -17,15 +17,21 @@ const MENU_ADMINISTRADOR_AHBB = [
   { icono: 'people', etiqueta: 'Usuarios', ruta: '/admin/usuarios' },
   { icono: 'upload_file', etiqueta: 'Carga Masiva', ruta: '/admin/carga-masiva' },
 
+  // ─── Seguridad y control (JC) ───
+  { icono: 'admin_panel_settings', etiqueta: 'Roles y Accesos (RBAC)', ruta: '/admin/rbac', encabezado: 'Seguridad (JC)', separador: true },
+  { icono: 'policy', etiqueta: 'Auditoría del Sistema', ruta: '/admin/auditoria' },
+
   // ─── Carreras universitarias (trabajo grupal CJGP) ───
   { icono: 'account_tree', etiqueta: 'Carreras y Pensums', ruta: '/admin/carreras', encabezado: 'Carreras (CJGP)', separador: true },
   { icono: 'event_repeat', etiqueta: 'Períodos Académicos', ruta: '/admin/periodos' },
   { icono: 'person_add', etiqueta: 'Inscripción de Alumnos', ruta: '/admin/inscripcion-alumnos' },
 
   // ─── Control de Estudios de las carreras (módulo JC) ───
+  // El administrador configura y consulta, pero NO carga notas ni emite actas.
   { icono: 'rule', etiqueta: 'Planes de Evaluación', ruta: '/admin/planes-evaluacion', encabezado: 'Control de Estudios (JC)', separador: true },
-  { icono: 'grading', etiqueta: 'Carga de Notas y Actas', ruta: '/control-estudios/carga-notas' },
+  { icono: 'visibility', etiqueta: 'Consulta de Notas', ruta: '/admin/consulta-notas' },
   { icono: 'dataset', etiqueta: 'Consola Control Estudios', ruta: '/admin/control-estudios' },
+  { icono: 'fact_check', etiqueta: 'Auditoría Académica', ruta: '/control-estudios/auditoria' },
 
   // ─── Planificación (GA) ───
   { icono: 'format_list_bulleted', etiqueta: 'Plantillas de Plan', ruta: '/admin/plan-estudio/plantillas', encabezado: 'Planificación (GA)', separador: true },
@@ -80,6 +86,27 @@ const MENU_PROFESOR_AHBB = [
   { icono: 'receipt_long', etiqueta: 'Mis Recibos de Nómina', ruta: '/profesor/pagos/mis-recibos' },
 ];
 
+/**
+ * Menú del personal de Control de Estudios.
+ * Es el rol operativo del módulo `_jc`: hace lo mismo que el profesor en
+ * materia de notas, pero sobre TODAS las materias, y además audita.
+ */
+const MENU_CONTROL_ESTUDIOS_AHBB = [
+  { icono: 'dashboard', etiqueta: 'Mi Panel', ruta: '/dashboard', encabezado: 'Principal' },
+  { icono: 'calendar_month', etiqueta: 'Horarios', ruta: '/horarios' },
+
+  // ─── Operación de Control de Estudios (JC) ───
+  { icono: 'grading', etiqueta: 'Carga de Notas y Actas', ruta: '/control-estudios/carga-notas', encabezado: 'Control de Estudios (JC)', separador: true },
+  { icono: 'visibility', etiqueta: 'Consulta de Notas', ruta: '/admin/consulta-notas' },
+  { icono: 'fact_check', etiqueta: 'Auditoría Académica', ruta: '/control-estudios/auditoria' },
+  { icono: 'military_tech', etiqueta: 'Certificados de Sobresaliente', ruta: '/control-estudios/certificados-sobresaliente' },
+  { icono: 'dataset', etiqueta: 'Consola Control Estudios', ruta: '/admin/control-estudios' },
+
+  // ─── Contexto académico (solo lectura) ───
+  { icono: 'account_tree', etiqueta: 'Carreras y Pensums', ruta: '/admin/carreras', encabezado: 'Carreras (CJGP)', separador: true },
+  { icono: 'event_repeat', etiqueta: 'Períodos Académicos', ruta: '/admin/periodos' },
+];
+
 /** Menú del Alumno */
 const MENU_ALUMNO_AHBB = [
   { icono: 'dashboard', etiqueta: 'Mi Panel', ruta: '/dashboard', encabezado: 'Principal' },
@@ -100,6 +127,7 @@ const MENU_ALUMNO_AHBB = [
   { icono: 'history', etiqueta: 'Historial de Cursos', ruta: '/alumno/historial' },
 
   { icono: 'workspace_premium', etiqueta: 'Mis Certificados', ruta: '/alumno/mis-certificados', encabezado: 'Certificación', separador: true },
+  { icono: 'military_tech', etiqueta: 'Certificados de Sobresaliente', ruta: '/alumno/certificados-sobresaliente' },
   { icono: 'store', etiqueta: 'Tienda Oficial', ruta: '/tienda', encabezado: 'E-Commerce', separador: true },
 
   // ─── Aula Virtual (RP) ───
@@ -114,6 +142,7 @@ const MENU_ALUMNO_AHBB = [
  */
 const MENUS_POR_ROL_AHBB = {
   [ROLES_AHBB.ADMINISTRADOR]: MENU_ADMINISTRADOR_AHBB,
+  [ROLES_AHBB.CONTROL_ESTUDIOS]: MENU_CONTROL_ESTUDIOS_AHBB,
   [ROLES_AHBB.PROFESOR]: MENU_PROFESOR_AHBB,
   [ROLES_AHBB.ALUMNO]: MENU_ALUMNO_AHBB,
 };

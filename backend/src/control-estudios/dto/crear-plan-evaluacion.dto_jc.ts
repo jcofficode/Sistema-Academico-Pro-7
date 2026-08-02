@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
-  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -15,8 +14,11 @@ import {
 } from 'class-validator';
 
 /**
- * Ítem de evaluación configurable: "Corte 1", "Módulo A", "Reparación"...
+ * Corte evaluable configurable: "Corte 1", "Módulo A", "Parcial"...
  * El sistema NO conoce estos nombres de antemano: los define la coordinación.
+ *
+ * El plan contiene ÚNICAMENTE cortes: las reparaciones ya no se configuran
+ * aquí, sino que el docente las registra por corte al cargar las notas.
  */
 export class ItemEvaluacionDto_jc {
   @IsString()
@@ -32,12 +34,6 @@ export class ItemEvaluacionDto_jc {
   @Min(0)
   @Max(100)
   peso_jc!: number;
-
-  // true = condición especial (ej. Reparación): no suma peso,
-  // sustituye la definitiva reprobada si el alumno la presenta.
-  @IsOptional()
-  @IsBoolean()
-  esRecuperacion_jc?: boolean;
 }
 
 /**

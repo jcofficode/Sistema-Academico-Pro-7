@@ -34,7 +34,7 @@ export class CarrerasController_cjgp {
   constructor(private readonly carrerasService_cjgp: CarrerasService_cjgp) {}
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR', 'ALUMNO')
+  @RolesDecorator_ahbb('ADMIN', 'CONTROL_ESTUDIOS', 'PROFESOR', 'ALUMNO')
   @Get()
   async obtenerTodas_cjgp() {
     return this.carrerasService_cjgp.obtenerTodas_cjgp();
@@ -87,7 +87,7 @@ export class CarrerasController_cjgp {
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR', 'ALUMNO')
+  @RolesDecorator_ahbb('ADMIN', 'CONTROL_ESTUDIOS', 'PROFESOR', 'ALUMNO')
   @Get(':id')
   async obtenerDetalle_cjgp(@Param('id', ParseIntPipe) id_cjgp: number) {
     return this.carrerasService_cjgp.obtenerDetalle_cjgp(id_cjgp);

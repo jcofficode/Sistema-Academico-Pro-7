@@ -15,6 +15,7 @@ import { JwtAuthGuard_ahbb } from '../common/guards/jwt-auth.guard_ahbb';
 import { RolesGuard_ahbb } from '../common/guards/roles.guard_ahbb';
 import { RolesDecorator_ahbb } from '../common/decorators/roles.decorator_ahbb';
 import { CrearPlanEvaluacionDto_jc } from './dto/crear-plan-evaluacion.dto_jc';
+import { ROLES_JC } from '../common/constantes/roles_jc';
 
 /**
  * Admin UI del Esquema de Evaluación Parametrizado.
@@ -28,7 +29,7 @@ export class PlanesEvaluacionController_jc {
   ) {}
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN, ROLES_JC.CONTROL_ESTUDIOS, ROLES_JC.PROFESOR)
   @Get()
   async obtenerTodos_jc() {
     return this.planesService_jc.obtenerTodos_jc();
@@ -36,7 +37,7 @@ export class PlanesEvaluacionController_jc {
 
   // Diccionario de datos vía information_schema (requisito de metadatos)
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN, ROLES_JC.CONTROL_ESTUDIOS)
   @Get('metadatos')
   async obtenerMetadatos_jc() {
     return this.planesService_jc.obtenerMetadatos_jc();
@@ -44,7 +45,7 @@ export class PlanesEvaluacionController_jc {
 
   // Plan vigente que rige una materia en un período (lo usa la UI docente)
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN, ROLES_JC.CONTROL_ESTUDIOS, ROLES_JC.PROFESOR)
   @Get('vigente/:idMateria/:idPeriodo')
   async resolverVigente_jc(
     @Param('idMateria', ParseIntPipe) idMateria_jc: number,
@@ -54,21 +55,21 @@ export class PlanesEvaluacionController_jc {
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN, ROLES_JC.CONTROL_ESTUDIOS, ROLES_JC.PROFESOR)
   @Get(':id')
   async obtenerPorId_jc(@Param('id', ParseIntPipe) id_jc: number) {
     return this.planesService_jc.obtenerPorId_jc(id_jc);
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN)
   @Post()
   async crear_jc(@Body() datos_jc: CrearPlanEvaluacionDto_jc) {
     return this.planesService_jc.crear_jc(datos_jc);
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN)
   @Put(':id')
   async actualizar_jc(
     @Param('id', ParseIntPipe) id_jc: number,
@@ -78,14 +79,14 @@ export class PlanesEvaluacionController_jc {
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN)
   @Patch(':id/publicar')
   async publicar_jc(@Param('id', ParseIntPipe) id_jc: number) {
     return this.planesService_jc.publicar_jc(id_jc);
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
+  @RolesDecorator_ahbb(ROLES_JC.ADMIN)
   @Delete(':id')
   async eliminar_jc(@Param('id', ParseIntPipe) id_jc: number) {
     return this.planesService_jc.eliminar_jc(id_jc);

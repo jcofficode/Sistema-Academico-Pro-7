@@ -11,6 +11,10 @@ import * as nodemailer from 'nodemailer';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma.service';
 import { validarReferenciaPago_ahbb } from '../common/utils/validacion-pago.util_ahbb';
+import {
+  normalizarRol_jc,
+  rolParaFrontend_jc,
+} from '../common/constantes/roles_jc';
 
 @Injectable()
 export class UsuariosService {
@@ -626,32 +630,16 @@ export class UsuariosService {
   }
 
   /**
-   * Normaliza los roles provenientes del frontend a los valores internos de la base de datos.
+   * Normaliza los roles provenientes del frontend a los valores internos de la
+   * base de datos. La tabla de equivalencias vive en el catálogo único de roles
+   * (`common/constantes/roles_jc.ts`), que también conoce CONTROL_ESTUDIOS.
    */
   normalizarRolInterno_ahbb(rol_ahbb: string) {
-    const rolNormalizado_ahbb = String(rol_ahbb ?? '')
-      .trim()
-      .toLowerCase();
-    if (
-      rolNormalizado_ahbb === 'administrador' ||
-      rolNormalizado_ahbb === 'admin'
-    ) {
-      return 'ADMIN';
-    }
-    if (rolNormalizado_ahbb === 'profesor') {
-      return 'PROFESOR';
-    }
-    return 'ALUMNO';
+    return normalizarRol_jc(rol_ahbb);
   }
 
   mapearRolFrontend_ahbb(rol_ahbb?: string | null) {
-    if (rol_ahbb === 'ADMIN') {
-      return 'administrador';
-    }
-    if (rol_ahbb === 'PROFESOR') {
-      return 'profesor';
-    }
-    return 'alumno';
+    return rolParaFrontend_jc(rol_ahbb);
   }
 
   /**

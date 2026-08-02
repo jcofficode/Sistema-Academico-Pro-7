@@ -8,8 +8,9 @@
    4. Diccionario de Datos (metadatos vía information_schema).
 -->
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
+import { useAutenticacionStore_ahbb } from '../../stores/autenticacionStore_ahbb';
 import {
   validarCsv_jc,
   confirmarCsv_jc,
@@ -20,6 +21,7 @@ import {
 import { obtenerPeriodos_cjgp } from '../../servicios/academicoServicio_cjgp';
 
 const $q = useQuasar();
+const autenticacion_jc = useAutenticacionStore_ahbb();
 const pestana_jc = ref('csv');
 
 // ─── Pestaña 1: Carga masiva CSV ──────────────────────────────
@@ -27,8 +29,23 @@ const ENTIDADES_JC = [
   { valor: 'carreras', etiqueta: 'Carreras', plantilla: '/plantillas/plantilla_carreras_jc.csv' },
   { valor: 'materias', etiqueta: 'Materias (con prelaciones)', plantilla: '/plantillas/plantilla_materias_jc.csv' },
   { valor: 'planes-evaluacion', etiqueta: 'Planes de evaluación', plantilla: '/plantillas/plantilla_planes_evaluacion_jc.csv' },
-  { valor: 'calificaciones', etiqueta: 'Calificaciones (volcado de notas)', plantilla: '/plantillas/plantilla_calificaciones_jc.csv' },
+  {
+    valor: 'calificaciones',
+    etiqueta: 'Calificaciones (volcado de notas)',
+    plantilla: '/plantillas/plantilla_calificaciones_jc.csv',
+    // Cargar notas es competencia de Control de Estudios: el administrador
+    // supervisa, pero no asigna calificaciones por ninguna vía.
+    soloControlEstudios: true,
+  },
 ];
+
+/** Entidades que el usuario puede cargar según su rol. */
+const entidadesDisponibles_jc = computed(() =>
+  ENTIDADES_JC.filter(
+    (entidad_jc) =>
+      !entidad_jc.soloControlEstudios || autenticacion_jc.esControlEstudios_ahbb,
+  ),
+);
 
 const entidadSeleccionada_jc = ref(ENTIDADES_JC[0]);
 const archivoCsv_jc = ref(null);
@@ -169,7 +186,7 @@ onMounted(async () => {
               <div class="text-subtitle2 text-weight-bold q-mb-sm">1. Selecciona entidad y archivo</div>
               <q-select
                 v-model="entidadSeleccionada_jc"
-                :options="ENTIDADES_JC"
+                :options="entidadesDisponibles_jc"
                 option-label="etiqueta"
                 label="Entidad a poblar"
                 outlined

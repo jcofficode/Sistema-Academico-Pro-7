@@ -20,14 +20,14 @@ export class PeriodosController_cjgp {
   constructor(private readonly periodosService_cjgp: PeriodosService_cjgp) {}
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR', 'ALUMNO')
+  @RolesDecorator_ahbb('ADMIN', 'CONTROL_ESTUDIOS', 'PROFESOR', 'ALUMNO')
   @Get()
   async obtenerTodos_cjgp() {
     return this.periodosService_cjgp.obtenerTodos_cjgp();
   }
 
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR', 'ALUMNO')
+  @RolesDecorator_ahbb('ADMIN', 'CONTROL_ESTUDIOS', 'PROFESOR', 'ALUMNO')
   @Get('activo')
   async obtenerActivo_cjgp() {
     return this.periodosService_cjgp.obtenerActivo_cjgp();

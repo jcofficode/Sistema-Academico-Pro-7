@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CalificacionesService_jc } from './calificaciones.service_jc';
+import { AuditoriaService_jc } from '../auditoria/auditoria.service_jc';
+import {
+  ACCIONES_JC,
+  MODULOS_AUDITORIA_JC,
+} from '../auditoria/constantes/acciones-auditoria_jc';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 // @ts-ignore - pdfmake 0.3.x exporta el constructor en una subruta para Node
@@ -8,28 +13,26 @@ import PdfPrinter from 'pdfmake/js/Printer';
 import URLResolver from 'pdfmake/js/URLResolver';
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 
-const VERDE_OSCURO_JC = '#1b5e20';
 const VERDE_MEDIO_JC = '#2e7d32';
-const VERDE_CLARO_JC = '#e8f5e9';
 
 /**
- * ActasService_jc — Subsistema de Generación de Actas (PDF de Seguridad).
+ * ActasService_jc — Subsistema de Generación de Actas.
  *
- * Genera el respaldo inalterable del sistema en dos plantillas:
- *  - ACTA BLANCA: formato tabular estándar para auditoría rápida.
- *  - ACTA VERDE: formato de alta seguridad con óvalos para llenado manual,
- *    marca de agua tipo cinta de seguridad y bandas de guilloché.
+ * Emite el ACTA BLANCA: formato tabular oficial con las notas de cada corte,
+ * las reparaciones aplicadas, la definitiva y la condición de cada alumno.
+ * (La antigua "Acta Verde" de llenado manual fue descontinuada del sistema.)
  *
- * Cada emisión queda registrada con un hash SHA-256 del contenido, de modo
- * que siempre pueda verificarse que el acta física firmada coincide con el
- * respaldo digital. Las columnas del acta son dinámicas: nacen del plan de
- * evaluación configurado por la coordinación (metadatos).
+ * Cada emisión queda registrada con un hash SHA-256 del contenido, de modo que
+ * siempre pueda verificarse que el acta física firmada coincide con el respaldo
+ * digital. Las columnas del acta son dinámicas: nacen del plan de evaluación
+ * configurado por la coordinación (metadatos).
  */
 @Injectable()
 export class ActasService_jc {
   constructor(
     private readonly prisma_jc: PrismaService,
     private readonly calificacionesService_jc: CalificacionesService_jc,
+    private readonly auditoriaService_jc: AuditoriaService_jc,
   ) {}
 
   /** Historial de actas emitidas (auditoría del administrador). */
@@ -47,15 +50,15 @@ export class ActasService_jc {
   }
 
   /**
-   * Genera el PDF del acta (blanca o verde), registra la emisión con su
-   * hash de verificación y devuelve el buffer listo para descargar.
+   * Genera el PDF del acta, registra la emisión con su hash de verificación,
+   * la deja en la bitácora de auditoría y devuelve el buffer para descargar.
    */
   async generarActaPdf_jc(
     id_materia_jc: number,
     id_periodo_jc: number,
-    tipo_jc: 'BLANCA' | 'VERDE',
     idUsuarioGenera_jc: number,
   ): Promise<{ buffer: Buffer; codigo: string }> {
+    const tipo_jc = 'BLANCA';
     const matriz_jc = await this.calificacionesService_jc.obtenerMatriz_jc(
       id_materia_jc,
       id_periodo_jc,
@@ -83,10 +86,10 @@ export class ActasService_jc {
       .update(contenidoVerificable_jc)
       .digest('hex');
 
-    const codigo_jc = `ACTA-${matriz_jc.periodo.nombre_cjgp}-${matriz_jc.materia.codigo_cjgp}-${tipo_jc.charAt(0)}-${Date.now().toString(36).toUpperCase()}`;
+    const codigo_jc = `ACTA-${matriz_jc.periodo.nombre_cjgp}-${matriz_jc.materia.codigo_cjgp}-${Date.now().toString(36).toUpperCase()}`;
 
     // Registrar la emisión (respaldo auditable e inalterable)
-    await this.prisma_jc.td_acta_jc.create({
+    const acta_jc = await this.prisma_jc.td_acta_jc.create({
       data: {
         codigo_jc,
         tipo_jc,
@@ -97,11 +100,21 @@ export class ActasService_jc {
       },
     });
 
-    const definicion_jc =
-      tipo_jc === 'VERDE'
-        ? this.construirActaVerde_jc(matriz_jc, codigo_jc, hash_jc)
-        : this.construirActaBlanca_jc(matriz_jc, codigo_jc, hash_jc);
+    // Rastro para la auditoría de Control de Estudios
+    await this.auditoriaService_jc.registrarConAutor_jc(idUsuarioGenera_jc, {
+      modulo_jc: MODULOS_AUDITORIA_JC.CONTROL_ESTUDIOS,
+      accion_jc: ACCIONES_JC.ACTA_EMITIDA,
+      descripcion_jc: `emitió el acta ${codigo_jc} de ${matriz_jc.materia.codigo_cjgp} — ${matriz_jc.materia.nombre_cjgp} (${matriz_jc.periodo.nombre_cjgp}) con ${matriz_jc.filas.length} alumno(s)`,
+      id_materia_aud_jc: id_materia_jc,
+      id_periodo_aud_jc: id_periodo_jc,
+      entidad_jc: 'td_acta_jc',
+      id_entidad_jc: acta_jc.id_acta_jc,
+      metodo_jc: 'GET',
+      ruta_jc: `/control-estudios/actas/${id_materia_jc}/${id_periodo_jc}/pdf`,
+      detalle_jc: { codigo: codigo_jc, hash: hash_jc },
+    });
 
+    const definicion_jc = this.construirActaBlanca_jc(matriz_jc, codigo_jc, hash_jc);
     const buffer_jc = await this.renderizarPdf_jc(definicion_jc);
     return { buffer: buffer_jc, codigo: codigo_jc };
   }
@@ -238,7 +251,7 @@ export class ActasService_jc {
       { text: 'Cédula', bold: true, fontSize: 7 },
       { text: 'Apellidos y Nombres', bold: true, fontSize: 7 },
       ...items_jc.map((item_jc: any) => ({
-        text: `${item_jc.nombre_jc}\n(${item_jc.esRecuperacion_jc ? 'Condición' : Number(item_jc.peso_jc) + '%'})`,
+        text: `${item_jc.nombre_jc}\n(${Number(item_jc.peso_jc)}%)`,
         bold: true,
         fontSize: 7,
         alignment: 'center',
@@ -247,18 +260,43 @@ export class ActasService_jc {
       { text: 'Condición', bold: true, fontSize: 7, alignment: 'center' },
     ];
 
+    /**
+     * Celda de nota: si el corte tuvo reparación se imprime la nota efectiva
+     * seguida de (R) y en color, para que el acta refleje qué se reparó.
+     */
+    const celdaNota_jc = (fila_jc: any, item_jc: any) => {
+      const nota_jc = fila_jc.notas_jc[item_jc.id_item_jc];
+      const reparacion_jc = (fila_jc.reparaciones_jc ?? []).find(
+        (candidata_jc: any) => candidata_jc.id_item_jc === item_jc.id_item_jc,
+      );
+
+      if (!reparacion_jc) {
+        return {
+          text: nota_jc !== undefined ? String(nota_jc) : '—',
+          fontSize: 7,
+          alignment: 'center' as const,
+        };
+      }
+
+      const efectiva_jc = Math.max(nota_jc ?? 0, Number(reparacion_jc.valor_jc));
+      return {
+        text: `${efectiva_jc} (R)`,
+        fontSize: 7,
+        alignment: 'center' as const,
+        color: '#0d47a1',
+        bold: true,
+      };
+    };
+
+    const hayReparaciones_jc = matriz_jc.filas.some(
+      (fila_jc: any) => (fila_jc.reparaciones_jc ?? []).length > 0,
+    );
+
     const filasTabla_jc = matriz_jc.filas.map((fila_jc: any, indice_jc: number) => [
       { text: String(indice_jc + 1), fontSize: 7, alignment: 'center' },
       { text: fila_jc.alumno_jc.cedula_ahbb, fontSize: 7 },
       { text: `${fila_jc.alumno_jc.apellido_ahbb}, ${fila_jc.alumno_jc.nombre_ahbb}`, fontSize: 7 },
-      ...items_jc.map((item_jc: any) => ({
-        text:
-          fila_jc.notas_jc[item_jc.id_item_jc] !== undefined
-            ? String(fila_jc.notas_jc[item_jc.id_item_jc])
-            : '—',
-        fontSize: 7,
-        alignment: 'center',
-      })),
+      ...items_jc.map((item_jc: any) => celdaNota_jc(fila_jc, item_jc)),
       { text: String(fila_jc.definitiva_jc), fontSize: 7, alignment: 'center', bold: true },
       // Mientras el acta no se cierre (estatus INSCRITO), la condición es EN CURSO
       {
@@ -284,7 +322,7 @@ export class ActasService_jc {
       pageMargins: [30, 30, 30, 30],
       defaultStyle: { font: 'Helvetica' },
       content: [
-        ...this.construirEncabezado_jc(matriz_jc, 'ACTA DE CALIFICACIONES — ACTA BLANCA (AUDITORÍA)', '#1b2a4a'),
+        ...this.construirEncabezado_jc(matriz_jc, 'ACTA DE CALIFICACIONES', '#1b2a4a'),
         {
           table: {
             headerRows: 1,
@@ -304,122 +342,18 @@ export class ActasService_jc {
             vLineColor: () => '#b9c2d0',
           },
         },
+        ...(hayReparaciones_jc
+          ? [
+              {
+                text: '(R) La nota mostrada corresponde a una REPARACIÓN del corte: se registra la mejor entre la nota original y la de reparación.',
+                fontSize: 6.5,
+                italics: true,
+                color: '#0d47a1',
+                margin: [0, 6, 0, 0] as [number, number, number, number],
+              },
+            ]
+          : []),
         ...this.construirPie_jc(codigo_jc, hash_jc),
-      ],
-    };
-  }
-
-  /**
-   * ACTA VERDE: plantilla de alta seguridad para llenado MANUAL.
-   * Los espacios de nota son óvalos vacíos (se llenan a mano y luego se
-   * cotejan con el respaldo digital vía hash). Incluye marca de agua tipo
-   * cinta de seguridad y bandas superiores/inferiores estilo billete.
-   */
-  private construirActaVerde_jc(
-    matriz_jc: any,
-    codigo_jc: string,
-    hash_jc: string,
-  ): TDocumentDefinitions {
-    const items_jc = matriz_jc.plan.items_jc;
-
-    // Óvalo vacío para el llenado manual de la nota
-    const ovalo_jc = () => ({
-      canvas: [
-        {
-          type: 'ellipse' as const,
-          x: 22,
-          y: 9,
-          r1: 20,
-          r2: 8,
-          lineWidth: 0.9,
-          lineColor: VERDE_OSCURO_JC,
-        },
-      ],
-      margin: [0, 1, 0, 1] as [number, number, number, number],
-    });
-
-    const encabezadosTabla_jc = [
-      { text: '#', bold: true, fontSize: 7, alignment: 'center', color: 'white' },
-      { text: 'Cédula', bold: true, fontSize: 7, color: 'white' },
-      { text: 'Apellidos y Nombres', bold: true, fontSize: 7, color: 'white' },
-      ...items_jc.map((item_jc: any) => ({
-        text: `${item_jc.nombre_jc}\n(${item_jc.esRecuperacion_jc ? 'Condición' : Number(item_jc.peso_jc) + '%'})`,
-        bold: true,
-        fontSize: 7,
-        alignment: 'center',
-        color: 'white',
-      })),
-      { text: 'Definitiva', bold: true, fontSize: 7, alignment: 'center', color: 'white' },
-    ];
-
-    const filasTabla_jc = matriz_jc.filas.map((fila_jc: any, indice_jc: number) => [
-      { text: String(indice_jc + 1), fontSize: 7, alignment: 'center', margin: [0, 6, 0, 0] },
-      { text: fila_jc.alumno_jc.cedula_ahbb, fontSize: 7, margin: [0, 6, 0, 0] },
-      { text: `${fila_jc.alumno_jc.apellido_ahbb}, ${fila_jc.alumno_jc.nombre_ahbb}`, fontSize: 7, margin: [0, 6, 0, 0] },
-      ...items_jc.map(() => ovalo_jc()),
-      ovalo_jc(),
-    ]);
-
-    // Bandas de seguridad estilo billete (rectángulos alternados)
-    const bandaSeguridad_jc = (ancho_jc: number) => ({
-      canvas: Array.from({ length: Math.ceil(ancho_jc / 12) }, (_, i_jc) => ({
-        type: 'rect' as const,
-        x: i_jc * 12,
-        y: 0,
-        w: 8,
-        h: 6,
-        color: i_jc % 2 === 0 ? VERDE_OSCURO_JC : '#66bb6a',
-      })),
-      margin: [0, 4, 0, 4] as [number, number, number, number],
-    });
-
-    return {
-      pageSize: 'LETTER',
-      pageOrientation: 'landscape',
-      pageMargins: [30, 30, 30, 30],
-      defaultStyle: { font: 'Helvetica' },
-      // "Cinta de seguridad": marca de agua diagonal en toda la página
-      watermark: {
-        text: 'ACTA OFICIAL · ACADEMIA H&B · CONTROL DE ESTUDIOS',
-        color: VERDE_MEDIO_JC,
-        opacity: 0.08,
-        bold: true,
-      },
-      background: () => ({
-        canvas: [
-          // Fondo verde muy suave + doble marco de seguridad
-          { type: 'rect', x: 0, y: 0, w: 792, h: 612, color: VERDE_CLARO_JC },
-          { type: 'rect', x: 14, y: 14, w: 764, h: 584, lineWidth: 1.5, lineColor: VERDE_OSCURO_JC },
-          { type: 'rect', x: 18, y: 18, w: 756, h: 576, lineWidth: 0.5, lineColor: VERDE_MEDIO_JC },
-        ],
-      }),
-      content: [
-        bandaSeguridad_jc(732),
-        ...this.construirEncabezado_jc(matriz_jc, 'ACTA DE CALIFICACIONES — ACTA VERDE (LLENADO MANUAL)', VERDE_OSCURO_JC),
-        {
-          text: 'Escriba cada calificación DENTRO del óvalo con tinta. Toda enmienda anula el acta.',
-          fontSize: 7,
-          italics: true,
-          color: VERDE_OSCURO_JC,
-          margin: [0, 0, 0, 6],
-        },
-        {
-          table: {
-            headerRows: 1,
-            widths: [18, 60, '*', ...items_jc.map(() => 48), 48],
-            body: [encabezadosTabla_jc, ...filasTabla_jc],
-          },
-          layout: {
-            fillColor: (indiceFila_jc: number) =>
-              indiceFila_jc === 0 ? VERDE_OSCURO_JC : indiceFila_jc % 2 === 0 ? '#f1f8f1' : 'white',
-            hLineWidth: () => 0.6,
-            vLineWidth: () => 0.6,
-            hLineColor: () => VERDE_MEDIO_JC,
-            vLineColor: () => VERDE_MEDIO_JC,
-          },
-        },
-        ...this.construirPie_jc(codigo_jc, hash_jc),
-        bandaSeguridad_jc(732),
       ],
     };
   }

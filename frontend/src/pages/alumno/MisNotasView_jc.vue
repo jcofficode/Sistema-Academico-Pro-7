@@ -12,7 +12,11 @@
 import { ref, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAutoRefresh_ahbb } from '../../composables/useAutoRefresh_ahbb';
-import { obtenerMisNotas_jc } from '../../servicios/controlEstudiosServicio_jc';
+import {
+  obtenerMisNotas_jc,
+  obtenerMisNotificaciones_jc,
+  marcarNotificacionLeida_jc,
+} from '../../servicios/controlEstudiosServicio_jc';
 import { obtenerPeriodos_cjgp } from '../../servicios/academicoServicio_cjgp';
 
 const $q = useQuasar();
@@ -22,6 +26,31 @@ const periodoSeleccionado_jc = ref(null);
 const datos_jc = ref(null);
 const cargando_jc = ref(false);
 const ultimaActualizacion_jc = ref(null);
+
+// Felicitaciones pendientes (ej. Certificado de Sobresaliente recién emitido)
+const felicitaciones_jc = ref([]);
+
+/**
+ * Busca notificaciones sin leer de tipo FELICITACIÓN. Al llegar junto con el
+ * refresco automático, el alumno se entera de su certificado sin recargar.
+ */
+const cargarFelicitaciones_jc = async () => {
+  try {
+    const respuesta_jc = await obtenerMisNotificaciones_jc(true);
+    felicitaciones_jc.value = (respuesta_jc.notificaciones ?? []).filter(
+      (notificacion_jc) => notificacion_jc.tipo_jc === 'FELICITACION',
+    );
+  } catch {
+    // La bandeja es accesoria: si falla, la vista de notas sigue funcionando
+  }
+};
+
+const descartarFelicitacion_jc = async (notificacion_jc) => {
+  await marcarNotificacionLeida_jc(notificacion_jc.id_notificacion_jc);
+  felicitaciones_jc.value = felicitaciones_jc.value.filter(
+    (candidata_jc) => candidata_jc.id_notificacion_jc !== notificacion_jc.id_notificacion_jc,
+  );
+};
 
 /**
  * Carga las notas. En modo silencioso (auto-refresh) no muestra el spinner:
@@ -46,8 +75,11 @@ const cargarNotas_jc = async (silencioso_jc = false) => {
 };
 
 // ⏱ Tiempo real: polling cada 10 segundos con el composable del proyecto.
-// Cuando el profesor guarda una nota, el alumno la ve aparecer sola.
-useAutoRefresh_ahbb(() => cargarNotas_jc(true), 10_000, false);
+// Cuando el profesor guarda una nota o cierra el acta, el alumno lo ve solo.
+useAutoRefresh_ahbb(() => {
+  cargarNotas_jc(true);
+  cargarFelicitaciones_jc();
+}, 10_000, false);
 
 onMounted(async () => {
   try {
@@ -57,6 +89,7 @@ onMounted(async () => {
       periodos_jc.value[0] ??
       null;
     cargarNotas_jc();
+    cargarFelicitaciones_jc();
   } catch {
     $q.notify({ type: 'negative', message: 'No se pudieron cargar los períodos.' });
   }
@@ -92,6 +125,31 @@ onMounted(async () => {
         </q-chip>
       </div>
     </div>
+
+    <!-- 🏅 Felicitación por Certificado de Sobresaliente (llega sola con el refresco) -->
+    <q-banner
+      v-for="felicitacion_jc in felicitaciones_jc"
+      :key="felicitacion_jc.id_notificacion_jc"
+      rounded
+      class="bg-amber-1 text-brown-9 q-mb-sm"
+    >
+      <template #avatar>
+        <q-avatar color="amber-8" text-color="white" icon="military_tech" />
+      </template>
+      <div class="text-weight-bold">{{ felicitacion_jc.titulo_jc }}</div>
+      <div class="text-caption">{{ felicitacion_jc.mensaje_jc }}</div>
+      <template #action>
+        <q-btn
+          flat
+          dense
+          color="brown-9"
+          icon="download"
+          label="Ver mi certificado"
+          :to="felicitacion_jc.enlace_jc ?? '/alumno/certificados-sobresaliente'"
+        />
+        <q-btn flat dense color="brown-7" label="Entendido" @click="descartarFelicitacion_jc(felicitacion_jc)" />
+      </template>
+    </q-banner>
 
     <!-- Identidad del alumno (viene del servidor vía JWT: nadie puede ver notas ajenas) -->
     <q-card v-if="datos_jc" flat bordered class="q-pa-md q-mb-md bg-blue-grey-1">
@@ -169,24 +227,40 @@ onMounted(async () => {
               <q-markup-table flat dense>
                 <thead>
                   <tr class="bg-grey-2">
-                    <th class="text-left">Evaluación</th>
+                    <th class="text-left">Corte</th>
                     <th class="text-center">Peso</th>
                     <th class="text-center">Nota</th>
+                    <th class="text-center">Reparación</th>
+                    <th class="text-center">Cuenta</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="item_jc in materia_jc.plan_jc.items_jc" :key="item_jc.id_item_jc">
                     <td>{{ item_jc.nombre_jc }}</td>
-                    <td class="text-center text-caption">
-                      {{ item_jc.esRecuperacion_jc ? 'Condición' : `${Number(item_jc.peso_jc)}%` }}
+                    <td class="text-center text-caption">{{ Number(item_jc.peso_jc) }}%</td>
+                    <td class="text-center">
+                      {{ item_jc.valor_jc !== null ? item_jc.valor_jc : '—' }}
+                    </td>
+                    <td class="text-center">
+                      <q-chip
+                        v-if="item_jc.reparacion_jc !== null"
+                        dense
+                        size="sm"
+                        color="blue-1"
+                        text-color="blue-9"
+                        icon="autorenew"
+                      >
+                        {{ item_jc.reparacion_jc }}
+                      </q-chip>
+                      <span v-else class="text-grey-5">—</span>
                     </td>
                     <td class="text-center text-weight-bold">
-                      {{ item_jc.valor_jc !== null ? item_jc.valor_jc : '—' }}
+                      {{ item_jc.valorEfectivo_jc !== null ? item_jc.valorEfectivo_jc : '—' }}
                     </td>
                   </tr>
                   <tr class="bg-blue-grey-1">
                     <td class="text-weight-bold">Definitiva parcial</td>
-                    <td></td>
+                    <td colspan="3"></td>
                     <td class="text-center text-weight-bold text-primary">
                       {{ materia_jc.definitivaParcial_jc ?? '—' }}
                     </td>

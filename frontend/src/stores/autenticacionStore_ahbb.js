@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia';
-import { ROLES_AHBB } from '../constantes/roles_ahbb';
+import {
+  ROLES_AHBB,
+  ROLES_OPERADORES_NOTAS_AHBB,
+} from '../constantes/roles_ahbb';
 import {
   iniciarSesion_ahbb as servicioIniciarSesion_ahbb,
   registrarUsuario_ahbb as servicioRegistrarUsuario_ahbb,
@@ -41,6 +44,14 @@ export const useAutenticacionStore_ahbb = defineStore('autenticacion_ahbb', {
       estado.usuarioActivo_ahbb?.rol === ROLES_AHBB.PROFESOR,
     esAlumno_ahbb: (estado) =>
       estado.usuarioActivo_ahbb?.rol === ROLES_AHBB.ALUMNO,
+    esControlEstudios_ahbb: (estado) =>
+      estado.usuarioActivo_ahbb?.rol === ROLES_AHBB.CONTROL_ESTUDIOS,
+    /**
+     * Puede cargar notas, registrar reparaciones y emitir actas.
+     * El administrador NO: en Control de Estudios solo consulta.
+     */
+    puedeOperarNotas_ahbb: (estado) =>
+      ROLES_OPERADORES_NOTAS_AHBB.includes(estado.usuarioActivo_ahbb?.rol),
   },
 
   actions: {
