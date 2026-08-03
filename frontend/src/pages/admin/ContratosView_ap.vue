@@ -44,10 +44,16 @@ const cargar_ap = async () => {
     ]);
     contratos_ap.value = contratosData_ap;
     profesores_ap.value = (usuariosData_ap ?? [])
-      .map((u_ap) => ({
-        label: `${u_ap.apellido_ahbb}, ${u_ap.nombre_ahbb} (${u_ap.cedula_ahbb})`,
-        value: u_ap.id_usuario_ahbb,
-      }));
+      .map((u_ap) => {
+        const apellido = u_ap.apellido ?? u_ap.apellido_ahbb ?? '';
+        const nombre = u_ap.nombre ?? u_ap.nombre_ahbb ?? '';
+        const cedula = u_ap.cedula ?? u_ap.cedula_ahbb ?? '';
+        const id = u_ap.id ?? u_ap.id_usuario_ahbb;
+        return {
+          label: `${apellido}, ${nombre} (${cedula})`.trim(),
+          value: id,
+        };
+      });
   } catch {
     $q.notify({ type: 'negative', message: 'Error al cargar los contratos.' });
   } finally {
@@ -68,6 +74,14 @@ const guardar_ap = async () => {
   }
   if (!formulario_ap.value.monto_ap || formulario_ap.value.monto_ap <= 0) {
     $q.notify({ type: 'warning', message: 'El monto debe ser mayor a cero.' });
+    return;
+  }
+  if (formulario_ap.value.tipo_ap === 'FIJO' && formulario_ap.value.monto_ap < 240) {
+    $q.notify({ type: 'warning', message: 'El sueldo mensual FIJO no puede ser menor al salario mínimo integral base de $240 USD.' });
+    return;
+  }
+  if (formulario_ap.value.tipo_ap === 'POR_HORA' && formulario_ap.value.monto_ap < 10) {
+    $q.notify({ type: 'warning', message: 'La tarifa POR HORA no puede ser menor al piso legal de $10 USD/hora.' });
     return;
   }
   guardando_ap.value = true;

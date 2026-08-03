@@ -1,9 +1,8 @@
-import { IsString, IsNumber, IsOptional, IsIn, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsIn } from 'class-validator';
 
 /**
  * CrearPagoDto_ap — Datos que el alumno envía al registrar un pago.
- * La referencia simula el número de pago móvil o transferencia bancaria.
- * El id del usuario siempre se extrae del JWT, nunca del body.
+ * Soporta TRANSFERENCIA, PAGO_MOVIL y ZELLE.
  */
 export class CrearPagoDto_ap {
   @IsIn(['PERIODO', 'CURSO'], { message: 'El concepto debe ser PERIODO o CURSO.' })
@@ -22,4 +21,28 @@ export class CrearPagoDto_ap {
 
   @IsString({ message: 'La referencia de pago es requerida.' })
   referencia_ap: string;
+
+  @IsOptional()
+  @IsIn(['TRANSFERENCIA', 'PAGO_MOVIL', 'ZELLE'], { message: 'El método de pago debe ser TRANSFERENCIA, PAGO_MOVIL o ZELLE.' })
+  metodo_pago?: string;
+
+  @IsOptional()
+  @IsString()
+  banco_origen?: string;
+
+  @IsOptional()
+  @IsString()
+  telefono_emisor?: string;
+
+  @IsOptional()
+  @IsString()
+  cedula_rif_emisor?: string;
+
+  @IsOptional()
+  @IsString()
+  correo_titular_zelle?: string;
+
+  @IsOptional()
+  @IsString()
+  nombre_titular_zelle?: string;
 }

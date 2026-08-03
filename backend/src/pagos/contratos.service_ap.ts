@@ -70,6 +70,18 @@ export class ContratosService_ap {
       );
     }
 
+    // Validar piso legal de Salario Mínimo Integral Indexado
+    if (datos_ap.tipo_ap === 'FIJO' && Number(datos_ap.monto_ap) < 240) {
+      throw new BadRequestException(
+        'El monto para contrato FIJO no puede ser inferior al Salario Mínimo Integral Indexado de $240 USD.',
+      );
+    }
+    if (datos_ap.tipo_ap === 'POR_HORA' && Number(datos_ap.monto_ap) < 10) {
+      throw new BadRequestException(
+        'La tarifa por hora para contrato POR_HORA no puede ser inferior al piso legal de $10 USD/hora.',
+      );
+    }
+
     return this.prisma_ap.td_contrato_profesor_ap.upsert({
       where: { id_profesor_ap: datos_ap.id_profesor_ap },
       create: {

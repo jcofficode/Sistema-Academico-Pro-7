@@ -64,17 +64,27 @@ export class TarifasService_ap {
     return tarifa_ap;
   }
 
-  /** Crea una nueva tarifa. */
+  /** Crea una nueva tarifa calculada dinámicamente en función de las UC. */
   async crear_ap(datos_ap: CrearTarifaDto_ap) {
-    if (datos_ap.concepto_ap === 'CURSO' && !datos_ap.id_curso_ap) {
-      // Tarifa genérica de curso (sin curso específico) es válida
-    }
+    const precioUC = datos_ap.precio_uc_base ?? 12.00;
+    const totalUC = datos_ap.total_uc ?? (datos_ap.concepto_ap === 'PERIODO' ? 30 : 5);
+    const arancel = datos_ap.arancel_admin ?? 20.00;
+    const seguro = datos_ap.seguro_estudiantil ?? 10.00;
+
+    // Fórmula matemática obligatoria: Monto = (Arancel + Seguro) + (∑ UC * Costo_UC)
+    const factorDescuento = datos_ap.concepto_ap === 'PERIODO' ? 0.85 : 1.0; // 15% desc. bloque por período
+    const montoUC = totalUC * precioUC * factorDescuento;
+    const montoCalculadoUC = Number((arancel + seguro + montoUC).toFixed(2));
+
+    const descripcionFinal = datos_ap.descripcion_ap || 
+      `${datos_ap.concepto_ap}: ${totalUC} UC a $${precioUC.toFixed(2)}/UC (+ $${arancel} Arancel + $${seguro} Seguro)`;
+
     return this.prisma_ap.td_tarifa_ap.create({
       data: {
         concepto_ap: datos_ap.concepto_ap,
         id_curso_ap: datos_ap.id_curso_ap ?? null,
-        monto_ap: datos_ap.monto_ap,
-        descripcion_ap: datos_ap.descripcion_ap,
+        monto_ap: montoCalculadoUC,
+        descripcion_ap: descripcionFinal,
         activa_ap: datos_ap.activa_ap ?? true,
       },
     });

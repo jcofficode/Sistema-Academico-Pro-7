@@ -35,6 +35,19 @@ export class PagosController_ap {
 
   // ─── Alumno: ver y crear sus pagos ────────────────────────────
 
+  @Post('calcular-cobro')
+  async calcularCobro_ap(
+    @Body() datos_ap: {
+      modalidad: 'TRIMESTRE' | 'CURSO_INDIVIDUAL';
+      cantidad_uc?: number;
+      cantidad_cursos?: number;
+      es_pago_contado?: boolean;
+      es_pago_fraccionado?: boolean;
+    },
+  ) {
+    return this.pagosService_ap.calcularCobroDinamico_ap(datos_ap);
+  }
+
   @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
   @RolesDecorator_ahbb('ALUMNO')
   @Get('mis-pagos')

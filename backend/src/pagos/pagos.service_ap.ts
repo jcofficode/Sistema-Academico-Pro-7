@@ -266,4 +266,133 @@ export class PagosService_ap {
       filas: filas_ap,
     };
   }
+
+  /**
+   * Cálculo dinámico automatizado del cobro de inscripción y facturación basado en UC.
+   * 
+   * Reglas de Negocio:
+   * 1. Prohibición de Montos Arbitrarios: Todo cobro se calcula matemáticamente por suma de UC.
+   * 2. Cálculo Período: Monto = (Arancel + Seguro) + (∑ UC_Materias * Costo_UC * (1 - %DescuentoBloque)).
+   * 3. Cálculo Curso Individual: Monto = (Arancel + Seguro) + (UC_Materia * Costo_UC_Regular).
+   * 4. Conversión Automática: Si el estudiante intenta inscribir >= 4 cursos (o >= 22 UC), 
+   *    el sistema CONVIERTE AUTOMÁTICAMENTE la solicitud a Modalidad Período Completo.
+   */
+  async calcularCobroDinamico_ap(datos_ap: {
+    modalidad: 'TRIMESTRE' | 'CURSO_INDIVIDUAL';
+    cantidad_uc?: number;
+    cantidad_cursos?: number;
+    es_pago_contado?: boolean;
+    es_pago_fraccionado?: boolean;
+  }) {
+    const arancelUSD = 20.00;
+    const seguroUSD = 10.00;
+    const precioUCBaseUSD = 12.00; // Costo regulable por UC
+
+    let cantidadUC = Number(datos_ap.cantidad_uc ?? 0);
+    let cantidadCursos = Number(datos_ap.cantidad_cursos ?? 0);
+    let modalidad = datos_ap.modalidad;
+    let esContado = datos_ap.es_pago_contado ?? true;
+    let esFraccionado = datos_ap.es_pago_fraccionado ?? false;
+
+    let conversionAutomatica = false;
+    let mensajeConversion = '';
+
+    // REGLA DE CONVERSIÓN AUTOMÁTICA OBLIGATORIA
+    // Si intenta inscribir 4 o más cursos individuales (o >= 22 UC), se convierte automáticamente a Período Completo
+    if (modalidad === 'CURSO_INDIVIDUAL' && (cantidadCursos >= 4 || cantidadUC >= 22)) {
+      modalidad = 'TRIMESTRE';
+      conversionAutomatica = true;
+      if (cantidadUC < 22) {
+        cantidadUC = Math.max(22, cantidadCursos * 5); // Ajustar al mínimo de carga trimestral (22 UC)
+      }
+      mensajeConversion = `Se aplicó CONVERSIÓN AUTOMÁTICA a modalidad Período Completo al seleccionar ${cantidadCursos} cursos (${cantidadUC} UC).`;
+    }
+
+    let montoUCBrutoUSD = 0;
+    let descuentoBloqueUSD = 0;
+    let descuentoProntoPagoUSD = 0;
+    let totalCuotas = 1;
+
+    if (modalidad === 'TRIMESTRE') {
+      // Ajuste de rango si no se enviaron UC
+      if (cantidadUC === 0) cantidadUC = 30; // Carga promedio estándar de 6 materias (30 UC)
+
+      if (cantidadUC < 22 || cantidadUC > 42) {
+        throw new BadRequestException(
+          `La modalidad por Período/Trimestre exige inscribir entre 22 y 42 UC. UC indicadas: ${cantidadUC}.`,
+        );
+      }
+
+      // Descuento del 15% en el precio de la UC por inscribir el bloque completo
+      const precioUCAjustadoUSD = precioUCBaseUSD * 0.85; // $10.20 USD/UC
+      montoUCBrutoUSD = cantidadUC * precioUCBaseUSD;
+      descuentoBloqueUSD = cantidadUC * (precioUCBaseUSD - precioUCAjustadoUSD);
+      const subtotalUSD = arancelUSD + seguroUSD + (cantidadUC * precioUCAjustadoUSD);
+
+      // Descuento adicional del 10% por pago 100% de contado sin cuotas
+      if (esContado && !esFraccionado) {
+        descuentoProntoPagoUSD = subtotalUSD * 0.10;
+      }
+
+      if (esFraccionado) {
+        totalCuotas = 3;
+      }
+
+      const montoTotalUSD = subtotalUSD - descuentoProntoPagoUSD;
+      return {
+        modalidad: 'TRIMESTRE',
+        conversion_automatica_aplicada: conversionAutomatica,
+        mensaje_conversion: conversionAutomatica ? mensajeConversion : null,
+        arancel_administrativo_usd: arancelUSD,
+        seguro_estudiantil_usd: seguroUSD,
+        cantidad_uc: cantidadUC,
+        precio_uc_base_usd: precioUCBaseUSD,
+        precio_uc_aplicado_usd: precioUCAjustadoUSD,
+        monto_uc_bruto_usd: montoUCBrutoUSD,
+        descuento_bloque_usd: Number(descuentoBloqueUSD.toFixed(2)),
+        descuento_pronto_pago_usd: Number(descuentoProntoPagoUSD.toFixed(2)),
+        monto_total_usd: Number(montoTotalUSD.toFixed(2)),
+        es_pago_fraccionado: esFraccionado,
+        total_cuotas: totalCuotas,
+        monto_cuota_usd: Number((montoTotalUSD / totalCuotas).toFixed(2)),
+        formula_aplicada: `Monto Período = (Arancel $${arancelUSD} + Seguro $${seguroUSD}) + (∑ UC ${cantidadUC} * $${precioUCAjustadoUSD.toFixed(2)}) - Descuentos`,
+      };
+    } else {
+      // Modalidad CURSO_INDIVIDUAL (Máximo 3 cursos)
+      if (cantidadCursos < 1 || cantidadCursos > 3) {
+        throw new BadRequestException(
+          `La modalidad por curso individual permite de 1 a 3 cursos únicamente. Cursos indicados: ${cantidadCursos}.`,
+        );
+      }
+      if (esFraccionado && cantidadCursos < 3) {
+        throw new BadRequestException(
+          `No se permite pago fraccionado si solo inscribe 1 o 2 cursos individuales. Se requiere inscribir 3 cursos para fraccionar.`,
+        );
+      }
+
+      const ucCalculadas = cantidadUC > 0 ? cantidadUC : cantidadCursos * 5;
+      montoUCBrutoUSD = ucCalculadas * precioUCBaseUSD;
+      const montoTotalUSD = arancelUSD + seguroUSD + montoUCBrutoUSD;
+
+      if (esFraccionado) totalCuotas = 3;
+
+      return {
+        modalidad: 'CURSO_INDIVIDUAL',
+        conversion_automatica_aplicada: false,
+        arancel_administrativo_usd: arancelUSD,
+        seguro_estudiantil_usd: seguroUSD,
+        cantidad_cursos: cantidadCursos,
+        cantidad_uc: ucCalculadas,
+        precio_uc_aplicado_usd: precioUCBaseUSD,
+        monto_uc_bruto_usd: montoUCBrutoUSD,
+        descuento_bloque_usd: 0,
+        descuento_pronto_pago_usd: 0,
+        monto_total_usd: Number(montoTotalUSD.toFixed(2)),
+        es_pago_fraccionado: esFraccionado,
+        total_cuotas: totalCuotas,
+        monto_cuota_usd: Number((montoTotalUSD / totalCuotas).toFixed(2)),
+        formula_aplicada: `Monto Curso = (Arancel $${arancelUSD} + Seguro $${seguroUSD}) + (UC_Materia ${ucCalculadas} * $${precioUCBaseUSD.toFixed(2)})`,
+      };
+    }
+  }
 }

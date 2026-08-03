@@ -25,8 +25,29 @@ const formulario_ap = ref({
   concepto_ap: 'PERIODO',
   id_tarifa_ap: null,
   id_periodo_ap: null,
+  metodo_pago: 'PAGO_MOVIL',
+  banco_origen: '',
+  telefono_emisor: '',
+  cedula_rif_emisor: '',
+  correo_titular_zelle: '',
+  nombre_titular_zelle: '',
   referencia_ap: '',
 });
+
+const OPCIONES_METODOS = [
+  { label: 'Pago Móvil Interbancario', value: 'PAGO_MOVIL' },
+  { label: 'Transferencia Bancaria (Bs.)', value: 'TRANSFERENCIA' },
+  { label: 'ZELLE (Transferencia USD)', value: 'ZELLE' },
+];
+
+const OPCIONES_BANCOS = [
+  'BANCO DE VENEZUELA',
+  'BANCO MERCANTIL',
+  'BANESCO',
+  'PROVINCIAL',
+  'BANCO BNC',
+  'OTRO BANCO',
+];
 
 const esSolvente_ap = computed(() => {
   if (!periodoActivo_ap.value) return false;
@@ -45,10 +66,11 @@ const colorEstado_ap = (estado_ap) => ({
 }[estado_ap] ?? 'grey');
 
 const columnas_ap = [
+  { name: 'metodo_pago', label: 'Método', field: (r) => r.metodo_pago ?? 'PAGO_MOVIL', align: 'center' },
   { name: 'concepto_ap', label: 'Concepto', field: 'concepto_ap', align: 'left' },
   { name: 'periodo', label: 'Período / Curso', field: (r) => r.periodo_ap?.nombre_cjgp ?? r.curso_ap?.nombre_ahbb ?? '—', align: 'left' },
   { name: 'monto_ap', label: 'Monto (Bs.)', field: 'monto_ap', align: 'right', format: (v) => Number(v).toFixed(2) },
-  { name: 'referencia_ap', label: 'Referencia', field: 'referencia_ap', align: 'left' },
+  { name: 'referencia_ap', label: 'Referencia / Detalle', field: (r) => r.referencia_ap, align: 'left' },
   { name: 'estado_ap', label: 'Estado', field: 'estado_ap', align: 'center' },
   { name: 'creadoEn_ap', label: 'Fecha', field: 'creadoEn_ap', align: 'left', format: (v) => v ? new Date(v).toLocaleDateString('es-VE') : '—' },
   { name: 'acciones_ap', label: 'Acciones', field: 'acciones_ap', align: 'center' },
@@ -79,6 +101,12 @@ const abrirPagarPeriodo_ap = () => {
     concepto_ap: 'PERIODO',
     id_tarifa_ap: tarifaPeriodo_ap.value.id_tarifa_ap,
     id_periodo_ap: periodoActivo_ap.value?.id_periodo_cjgp ?? null,
+    metodo_pago: 'PAGO_MOVIL',
+    banco_origen: 'BANCO DE VENEZUELA',
+    telefono_emisor: '',
+    cedula_rif_emisor: '',
+    correo_titular_zelle: '',
+    nombre_titular_zelle: '',
     referencia_ap: '',
   };
   dialogoAbierto_ap.value = true;
@@ -86,7 +114,15 @@ const abrirPagarPeriodo_ap = () => {
 
 const enviarPago_ap = async () => {
   if (!formulario_ap.value.referencia_ap.trim()) {
-    $q.notify({ type: 'warning', message: 'Ingresa la referencia del pago móvil o transferencia.' });
+    $q.notify({ type: 'warning', message: 'Ingresa el número de referencia o confirmación del pago.' });
+    return;
+  }
+  if (formulario_ap.value.metodo_pago === 'PAGO_MOVIL' && (!formulario_ap.value.telefono_emisor || !formulario_ap.value.cedula_rif_emisor)) {
+    $q.notify({ type: 'warning', message: 'Para Pago Móvil, el teléfono emisor y la Cédula/RIF son requeridos.' });
+    return;
+  }
+  if (formulario_ap.value.metodo_pago === 'ZELLE' && (!formulario_ap.value.correo_titular_zelle || !formulario_ap.value.nombre_titular_zelle)) {
+    $q.notify({ type: 'warning', message: 'Para Zelle, el correo y nombre del titular ordenante son requeridos.' });
     return;
   }
   enviando_ap.value = true;
@@ -206,13 +242,78 @@ onMounted(cargar_ap);
               <strong>Concepto:</strong> Inscripción del Período {{ periodoActivo_ap?.nombre_cjgp }}
             </div>
           </q-banner>
-          <q-input
-            v-model="formulario_ap.referencia_ap"
-            label="Referencia de pago (número de operación)"
-            outlined dense autofocus
-            hint="Ej: número de pago móvil, transferencia o voucher"
-            :rules="[(v) => !!v || 'La referencia es requerida']"
+          <q-select
+            v-model="formulario_ap.metodo_pago"
+            :options="OPCIONES_METODOS"
+            label="Método de Pago"
+            outlined dense
+            emit-value map-options
+            class="q-mb-sm"
           />
+
+          <!-- Campos específicos según método de pago -->
+          <template v-if="formulario_ap.metodo_pago === 'PAGO_MOVIL'">
+            <q-select
+              v-model="formulario_ap.banco_origen"
+              :options="OPCIONES_BANCOS"
+              label="Banco de Origen"
+              outlined dense
+            />
+            <q-input
+              v-model="formulario_ap.telefono_emisor"
+              label="Teléfono del Emisor (Ej: 04141234567)"
+              outlined dense
+              mask="###########"
+            />
+            <q-input
+              v-model="formulario_ap.cedula_rif_emisor"
+              label="Cédula / RIF del Titular"
+              outlined dense
+              hint="Ej: V-12345678 o J-123456789"
+            />
+            <q-input
+              v-model="formulario_ap.referencia_ap"
+              label="Número de Referencia de Pago Móvil"
+              outlined dense
+              hint="Últimos 6 u 8 dígitos del comprobante"
+            />
+          </template>
+
+          <template v-else-if="formulario_ap.metodo_pago === 'TRANSFERENCIA'">
+            <q-select
+              v-model="formulario_ap.banco_origen"
+              :options="OPCIONES_BANCOS"
+              label="Banco de Origen"
+              outlined dense
+            />
+            <q-input
+              v-model="formulario_ap.referencia_ap"
+              label="Número de Transferencia Bancaria"
+              outlined dense
+              hint="Número completo de referencia o voucher"
+            />
+          </template>
+
+          <template v-else-if="formulario_ap.metodo_pago === 'ZELLE'">
+            <q-input
+              v-model="formulario_ap.correo_titular_zelle"
+              label="Correo de la Cuenta Zelle Ordenante"
+              type="email"
+              outlined dense
+              hint="Ej: cuenta@zelle.com"
+            />
+            <q-input
+              v-model="formulario_ap.nombre_titular_zelle"
+              label="Nombre Completo del Titular de Zelle"
+              outlined dense
+            />
+            <q-input
+              v-model="formulario_ap.referencia_ap"
+              label="Número de Confirmación / Referencia Zelle"
+              outlined dense
+              hint="Código de confirmación de la transferencia Zelle"
+            />
+          </template>
         </q-card-section>
         <q-card-actions align="right" class="q-pb-md q-px-md">
           <q-btn flat label="Cancelar" color="grey-7" v-close-popup />

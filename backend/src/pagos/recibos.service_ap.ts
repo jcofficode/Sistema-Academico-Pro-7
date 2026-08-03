@@ -303,25 +303,40 @@ export class RecibosService_ap {
             body: [
               [
                 { text: 'Concepto', bold: true, fontSize: 9, fillColor: AZUL_CLARO_AP },
-                { text: 'Monto (Bs.)', bold: true, fontSize: 9, fillColor: AZUL_CLARO_AP, alignment: 'right' },
+                { text: 'Monto (USD / Equiv. VES)', bold: true, fontSize: 9, fillColor: AZUL_CLARO_AP, alignment: 'right' },
               ],
               esPorHora_ap
                 ? [
-                    { text: `Horas dictadas: ${Number(nomina_ap.horas_ap).toFixed(2)} h × Bs. ${Number(nomina_ap.contrato_ap.monto_ap).toFixed(2)}/h`, fontSize: 9 },
-                    { text: Number(nomina_ap.monto_calculado_ap).toFixed(2), fontSize: 9, alignment: 'right' },
+                    { text: `Sueldo Base (Horas dictadas: ${Number(nomina_ap.horas_ap).toFixed(2)} h × $${Number(nomina_ap.contrato_ap.monto_ap).toFixed(2)}/h)`, fontSize: 9 },
+                    { text: `$${Number(nomina_ap.monto_calculado_ap).toFixed(2)} USD`, fontSize: 9, alignment: 'right' },
                   ]
                 : [
-                    { text: 'Sueldo fijo del período', fontSize: 9 },
-                    { text: Number(nomina_ap.monto_calculado_ap).toFixed(2), fontSize: 9, alignment: 'right' },
+                    { text: 'Sueldo Base del Período (Concepto Salarial)', fontSize: 9 },
+                    { text: `$${Number(nomina_ap.monto_calculado_ap).toFixed(2)} USD`, fontSize: 9, alignment: 'right' },
                   ],
               [
-                { text: 'TOTAL A PAGAR', bold: true, fontSize: 10, fillColor: AZUL_OSCURO_AP, color: 'white' },
-                { text: `Bs. ${Number(nomina_ap.monto_calculado_ap).toFixed(2)}`, bold: true, fontSize: 10, fillColor: AZUL_OSCURO_AP, color: 'white', alignment: 'right' },
+                { text: 'Cesta Ticket (Incentivo No Salarial — Ley)', fontSize: 9, color: '#2e7d32' },
+                { text: '$40.00 USD', fontSize: 9, alignment: 'right', color: '#2e7d32', bold: true },
+              ],
+              [
+                { text: 'Bono de Guerra Económica (Concepto No Salarial)', fontSize: 9, color: '#e65100' },
+                { text: '$90.00 USD', fontSize: 9, alignment: 'right', color: '#e65100', bold: true },
+              ],
+              [
+                { text: 'TOTAL INGRESO INTEGRAL INDEXADO', bold: true, fontSize: 10, fillColor: AZUL_OSCURO_AP, color: 'white' },
+                { text: `$${(Number(nomina_ap.monto_calculado_ap) + 130).toFixed(2)} USD`, bold: true, fontSize: 10, fillColor: AZUL_OSCURO_AP, color: 'white', alignment: 'right' },
               ],
             ],
           },
           layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => '#b0bec5', vLineColor: () => '#b0bec5' },
-          margin: [0, 0, 0, 20],
+          margin: [0, 0, 0, 10],
+        },
+        {
+          text: `* Pasivos Laborales (Prestaciones y Utilidades) calculados ÚNICAMENTE sobre Sueldo Base ($${Number(nomina_ap.monto_calculado_ap).toFixed(2)} USD), excluyendo Cesta Ticket y Bono de Guerra.`,
+          fontSize: 7,
+          color: '#555555',
+          italics: true,
+          margin: [0, 0, 0, 15],
         },
         {
           text: `Código: ${codigo_ap}   |   Hash SHA-256: ${hash_ap}`,

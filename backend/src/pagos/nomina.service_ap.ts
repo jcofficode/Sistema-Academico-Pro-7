@@ -17,9 +17,14 @@ import { PrismaService } from '../prisma.service';
  * El proceso genera registros en td_nomina_ap con estado SIMULADO.
  * El administrador revisa y aprueba cada nómina (estado PAGADO).
  */
+import { TasaCambioService_ap } from './tasa-cambio.service_ap';
+
 @Injectable()
 export class NominaService_ap {
-  constructor(private readonly prisma_ap: PrismaService) {}
+  constructor(
+    private readonly prisma_ap: PrismaService,
+    private readonly tasaCambioService_ap: TasaCambioService_ap,
+  ) {}
 
   /** Lista las nóminas de un período con estado y profesor. */
   async obtenerNominas_ap(id_periodo_ap: number) {
@@ -109,12 +114,22 @@ export class NominaService_ap {
         });
         const horasMaterias_ap = materias_ap * 3 * 16; // estimación estándar
 
+        const tarifaHora_ap = Math.max(10, Number(contrato_ap.monto_ap));
         horas_ap = horasCursos_ap + horasMaterias_ap;
-        monto_calculado_ap = horas_ap * Number(contrato_ap.monto_ap);
+        monto_calculado_ap = horas_ap * tarifaHora_ap;
       } else {
-        // FIJO: sueldo directo del contrato
-        monto_calculado_ap = Number(contrato_ap.monto_ap);
+        // FIJO: sueldo directo del contrato (con piso legal mínimo de $240 USD)
+        monto_calculado_ap = Math.max(240, Number(contrato_ap.monto_ap));
       }
+
+      const sueldoBaseUSD = monto_calculado_ap;
+      const cestaTicketUSD = 40.00; // Cestaticket $40 USD independiente (No Salarial)
+      const bonoGuerraUSD = 90.00; // Bono de Guerra (No Salarial)
+      const ingresoTotalUSD = sueldoBaseUSD + cestaTicketUSD + bonoGuerraUSD;
+
+      // Pasivos laborales computados EXCLUSIVAMENTE sobre Sueldo Base
+      const prestacionesAcumuladasUSD = Number(((sueldoBaseUSD / 30) * 15).toFixed(2));
+      const utilidadesAcumuladasUSD = Number(((sueldoBaseUSD / 30) * 10).toFixed(2));
 
       const nomina_ap = await this.prisma_ap.td_nomina_ap.upsert({
         where: {
@@ -127,12 +142,12 @@ export class NominaService_ap {
           id_contrato_ap: contrato_ap.id_contrato_ap,
           id_periodo_ap,
           horas_ap: contrato_ap.tipo_ap === 'POR_HORA' ? horas_ap : null,
-          monto_calculado_ap,
+          monto_calculado_ap: sueldoBaseUSD,
           estado_ap: 'SIMULADO',
         },
         update: {
           horas_ap: contrato_ap.tipo_ap === 'POR_HORA' ? horas_ap : null,
-          monto_calculado_ap,
+          monto_calculado_ap: sueldoBaseUSD,
           estado_ap: 'SIMULADO',
         },
         include: {
@@ -144,15 +159,41 @@ export class NominaService_ap {
         },
       });
 
-      resultados_ap.push(nomina_ap);
+      resultados_ap.push({
+        ...nomina_ap,
+        sueldo_base_usd: sueldoBaseUSD,
+        cesta_ticket_usd: cestaTicketUSD,
+        bono_guerra_usd: bonoGuerraUSD,
+        ingreso_total_usd: ingresoTotalUSD,
+        pasivos_laborales: {
+          prestaciones_usd: prestacionesAcumuladasUSD,
+          utilidades_usd: utilidadesAcumuladasUSD,
+          base_calculo: 'Sueldo Base exclusivamente (Excluye Cesta Ticket y Bono de Guerra)',
+        },
+      });
     }
+
+    const fxData = await this.tasaCambioService_ap.obtenerTasaOficialBCV_ap();
+    const tasaOficialBCV = fxData.tasa;
+    const timestampMontosVE = fxData.timestamp;
 
     return {
       exito: true,
       periodo: periodo_ap.nombre_cjgp,
+      tasaOficialBCV,
+      timestampMontosVE,
+      fuenteTasa: 'MontosVE FX API (bcv - USD/VES)',
       totalProfesores: resultados_ap.length,
-      totalMonto: resultados_ap.reduce(
-        (suma_ap, n_ap) => suma_ap + Number(n_ap.monto_calculado_ap),
+      totalMontoBaseUSD: resultados_ap.reduce(
+        (suma_ap, n_ap) => suma_ap + Number(n_ap.sueldo_base_usd),
+        0,
+      ),
+      totalIngresoIntegralUSD: resultados_ap.reduce(
+        (suma_ap, n_ap) => suma_ap + Number(n_ap.ingreso_total_usd),
+        0,
+      ),
+      totalMontoVES: resultados_ap.reduce(
+        (suma_ap, n_ap) => suma_ap + Number(n_ap.ingreso_total_usd) * tasaOficialBCV,
         0,
       ),
       nominas: resultados_ap,

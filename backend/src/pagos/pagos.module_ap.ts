@@ -10,6 +10,8 @@ import { ContratosService_ap } from './contratos.service_ap';
 import { NominaController_ap } from './nomina.controller_ap';
 import { NominaService_ap } from './nomina.service_ap';
 
+import { TasaCambioService_ap } from './tasa-cambio.service_ap';
+
 /**
  * PagosModule_ap — Módulo individual del Sistema de Pagos.
  *
@@ -34,7 +36,8 @@ import { NominaService_ap } from './nomina.service_ap';
     RecibosService_ap,
     ContratosService_ap,
     NominaService_ap,
+    TasaCambioService_ap,
   ],
-  exports: [PagosService_ap],
+  exports: [PagosService_ap, TasaCambioService_ap],
 })
 export class PagosModule_ap {}

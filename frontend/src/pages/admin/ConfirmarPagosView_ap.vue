@@ -30,12 +30,13 @@ const colorEstado_ap = (estado_ap) => ({
 }[estado_ap] ?? 'grey');
 
 const columnas_ap = [
+  { name: 'metodo_pago', label: 'Método', field: (row) => row.metodo_pago ?? 'PAGO_MOVIL', align: 'center' },
   { name: 'alumno', label: 'Alumno', field: (row) => `${row.alumno_ap?.apellido_ahbb}, ${row.alumno_ap?.nombre_ahbb}`, align: 'left', sortable: true },
   { name: 'cedula', label: 'Cédula', field: (row) => row.alumno_ap?.cedula_ahbb, align: 'left' },
   { name: 'concepto_ap', label: 'Concepto', field: 'concepto_ap', align: 'left' },
   { name: 'periodo', label: 'Período', field: (row) => row.periodo_ap?.nombre_cjgp ?? row.curso_ap?.nombre_ahbb ?? '—', align: 'left' },
   { name: 'monto_ap', label: 'Monto (Bs.)', field: 'monto_ap', align: 'right', format: (v) => Number(v).toFixed(2) },
-  { name: 'referencia_ap', label: 'Referencia', field: 'referencia_ap', align: 'left' },
+  { name: 'referencia_ap', label: 'Referencia / Detalle', field: 'referencia_ap', align: 'left' },
   { name: 'estado_ap', label: 'Estado', field: 'estado_ap', align: 'center' },
   { name: 'creadoEn_ap', label: 'Fecha', field: 'creadoEn_ap', align: 'left', format: (v) => v ? new Date(v).toLocaleDateString('es-VE') : '—' },
   { name: 'acciones_ap', label: 'Acciones', field: 'acciones_ap', align: 'center' },
@@ -162,9 +163,15 @@ onMounted(cargar_ap);
           <div class="info-pago-ap q-pa-md q-mb-md">
             <div><strong>Alumno:</strong> {{ pagoSeleccionado_ap.alumno_ap?.apellido_ahbb }}, {{ pagoSeleccionado_ap.alumno_ap?.nombre_ahbb }}</div>
             <div><strong>Cédula:</strong> {{ pagoSeleccionado_ap.alumno_ap?.cedula_ahbb }}</div>
+            <div><strong>Método:</strong> <q-chip dense color="teal-6" text-color="white" :label="pagoSeleccionado_ap.metodo_pago ?? 'PAGO_MOVIL'" /></div>
             <div><strong>Concepto:</strong> {{ pagoSeleccionado_ap.concepto_ap }}</div>
             <div><strong>Monto:</strong> Bs. {{ Number(pagoSeleccionado_ap.monto_ap).toFixed(2) }}</div>
-            <div><strong>Referencia:</strong> {{ pagoSeleccionado_ap.referencia_ap }}</div>
+            <div><strong>Referencia / Confirmación:</strong> {{ pagoSeleccionado_ap.referencia_ap }}</div>
+            <div v-if="pagoSeleccionado_ap.banco_origen"><strong>Banco Origen:</strong> {{ pagoSeleccionado_ap.banco_origen }}</div>
+            <div v-if="pagoSeleccionado_ap.telefono_emisor"><strong>Teléfono Emisor:</strong> {{ pagoSeleccionado_ap.telefono_emisor }}</div>
+            <div v-if="pagoSeleccionado_ap.cedula_rif_emisor"><strong>Cédula/RIF Titular:</strong> {{ pagoSeleccionado_ap.cedula_rif_emisor }}</div>
+            <div v-if="pagoSeleccionado_ap.correo_titular_zelle"><strong>Correo Zelle:</strong> {{ pagoSeleccionado_ap.correo_titular_zelle }}</div>
+            <div v-if="pagoSeleccionado_ap.nombre_titular_zelle"><strong>Titular Zelle:</strong> {{ pagoSeleccionado_ap.nombre_titular_zelle }}</div>
           </div>
           <q-input
             v-model="formAccion_ap.observacion_ap"
