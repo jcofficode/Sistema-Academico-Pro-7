@@ -12,9 +12,7 @@
             <q-icon name="edit_note" color="amber-4" size="26px" />
             <span class="text-h6 text-weight-bold">Formulario de Carga de Nota Final por Contingencia</span>
           </div>
-          <q-chip color="amber-6" text-color="dark" icon="gavel" dense class="text-weight-bold">
-            Rol: CONTROL_ESTUDIOS
-          </q-chip>
+
         </div>
       </q-card-section>
 
