@@ -1,24 +1,36 @@
 import { defineBoot } from '#q-app/wrappers';
 import axios from 'axios';
 
-// Be careful when using SSR for cross-request state pollution
-// due to creating a Singleton instance here;
-// If any client changes this (global) instance, it might be a
-// good idea to move this instance creation inside of the
-// "export default () => {}" function below (which runs individually
-// for each client)
-const api = axios.create({ baseURL: 'https://api.example.com' });
+/**
+ * Instancia global de Axios para Quasar
+ * Configura la URL base hacia el backend NestJS (http://localhost:3000/api)
+ * e inyecta dinámicamente el token JWT de la sesión del usuario.
+ */
+const BASE_URL = import.meta.env.VITE_BASE_URL_API_AHBB ?? 'http://localhost:3000/api';
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor de petición: adjunta el token JWT guardado en sessionStorage
+api.interceptors.request.use(
+  (config) => {
+    const token = sessionStorage.getItem('certificaciones_token_ahbb');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
 export default defineBoot(({ app }) => {
-  // for use inside Vue files (Options API) through this.$axios and this.$api
-
   app.config.globalProperties.$axios = axios;
-  // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
-  //       so you won't necessarily have to import axios in each vue file
-
   app.config.globalProperties.$api = api;
-  // ^ ^ ^ this will allow you to use this.$api (for Vue Options API form)
-  //       so you can easily perform requests against your app's API
 });
 
 export { api };

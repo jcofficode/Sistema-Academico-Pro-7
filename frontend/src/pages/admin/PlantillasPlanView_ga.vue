@@ -13,6 +13,20 @@
       />
     </div>
 
+    <!-- Banner de acceso a la nueva vista de Configuración Curricular -->
+    <q-banner rounded class="bg-indigo-9 text-white q-mb-md rounded-xl shadow-2 flex items-center justify-between">
+      <template #avatar>
+        <q-icon name="tune" size="28px" class="text-cyan-300" />
+      </template>
+      <div>
+        <div class="text-subtitle1 text-weight-bold">Nueva Vista: Configuración Curricular Global</div>
+        <div class="text-caption text-blue-200">El nuevo flujo del Product Owner permite configurar directamente el formato de evaluación (Cuantitativo / Cualitativo) para cada período.</div>
+      </div>
+      <template #action>
+        <q-btn unelevated color="cyan-7" text-color="white" label="Ir a Configuración Curricular" icon="settings" @click="$router.push('/admin/plan-estudio/configuracion-curricular')" class="text-weight-bold" />
+      </template>
+    </q-banner>
+
     <!-- Lista de plantillas -->
     <q-table
       :rows="plantillas_ga"
@@ -276,12 +290,21 @@ const formulario_ga = ref({
 const cargarDatos_ga = async () => {
   cargando_ga.value = true;
   try {
-    [plantillas_ga.value, periodos_ga.value] = await Promise.all([
+    const [resPlantillas, resPeriodos] = await Promise.allSettled([
       obtenerPlantillas_ga(),
       obtenerPeriodos_cjgp(),
     ]);
-  } catch {
-    $q.notify({ type: 'negative', message: 'Error al cargar los datos.' });
+
+    plantillas_ga.value = resPlantillas.status === 'fulfilled' && Array.isArray(resPlantillas.value)
+      ? resPlantillas.value
+      : [];
+
+    periodos_ga.value = resPeriodos.status === 'fulfilled' && Array.isArray(resPeriodos.value)
+      ? resPeriodos.value
+      : [];
+  } catch (err_ga) {
+    console.error('[_ga] Error al cargar datos:', err_ga);
+    plantillas_ga.value = [];
   } finally {
     cargando_ga.value = false;
   }
@@ -292,7 +315,7 @@ const abrirCreacion_ga = () => {
   vistaSoloLectura_ga.value = false;
   formulario_ga.value = {
     nombre_ga: 'Plantilla Institucional',
-    id_periodo_ga: periodos_ga.value.find(p => p.estado_cjgp === 'ACTIVO')?.id_periodo_cjgp || null,
+    id_periodo_ga: periodos_ga.value.find(p => p.activo_cjgp || p.estado_cjgp === 'ACTIVO')?.id_periodo_cjgp || (periodos_ga.value[0]?.id_periodo_cjgp ?? null),
     tipo_valoracion_ga: 'CUANTITATIVO',
     escala_min_ga: 0,
     escala_max_ga: 20,
@@ -360,6 +383,13 @@ const guardar_ga = async () => {
   if (formulario_ga.value.secciones_ga.length === 0) {
     return $q.notify({ type: 'warning', message: 'Agregue al menos una sección.' });
   }
+
+  // Validar que cada sección tenga nombre
+  for (const s of formulario_ga.value.secciones_ga) {
+    if (!s.nombre_ga || !s.nombre_ga.trim()) {
+      return $q.notify({ type: 'warning', message: 'Cada sección agregada debe tener un nombre asignado.' });
+    }
+  }
   
   if (formulario_ga.value.tipo_valoracion_ga === 'CUALITATIVO' && formulario_ga.value.niveles_ga.length === 0) {
     return $q.notify({ type: 'warning', message: 'Agregue al menos un nivel cualitativo.' });
@@ -382,12 +412,12 @@ const guardar_ga = async () => {
 
   guardando_ga.value = false;
 
-  if (res_ga.exito) {
-    $q.notify({ type: 'positive', message: res_ga.mensaje });
+  if (res_ga && res_ga.exito) {
+    $q.notify({ type: 'positive', message: res_ga.mensaje || 'Configuración guardada.' });
     dialogo_ga.value = false;
     cargarDatos_ga();
   } else {
-    $q.notify({ type: 'negative', message: res_ga.mensaje });
+    $q.notify({ type: 'negative', message: res_ga?.mensaje || 'Error al guardar la configuración.' });
   }
 };
 

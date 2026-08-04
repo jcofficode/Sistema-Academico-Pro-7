@@ -391,8 +391,8 @@ const cargarInicial_ga = async () => {
   try {
     periodos_ga.value = await obtenerPeriodos_cjgp();
     
-    // Seleccionar período activo por defecto
-    const activo = periodos_ga.value.find(p => p.estado_cjgp === 'ACTIVO');
+    // Seleccionar período activo por defecto (2026-II)
+    const activo = periodos_ga.value.find(p => p.activo_cjgp || p.estado_cjgp === 'ACTIVO') || periodos_ga.value[0];
     if (activo) {
       filtro_ga.value.id_periodo_ga = activo.id_periodo_cjgp;
       filtro_ga.value.id_periodo_reporte_ga = activo.id_periodo_cjgp;

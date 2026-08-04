@@ -1,3 +1,17 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Módulo de Plan de Estudio (_ga) - Planificación Académica
 
 ## 1. El Problema que Resuelve

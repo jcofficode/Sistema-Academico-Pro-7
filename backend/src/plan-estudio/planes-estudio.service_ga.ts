@@ -1,733 +1,580 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { PlantillasService_ga } from './plantillas.service_ga';
-import { CrearPlanEstudioDto_ga } from './dto/crear-plan-estudio.dto_ga';
-import { RevisarPlanDto_ga } from './dto/revisar-plan.dto_ga';
 import * as crypto from 'crypto';
-// @ts-ignore - pdfmake 0.3.x exporta el constructor en una subruta para Node
-import PdfPrinter from 'pdfmake/js/Printer';
-import type { TDocumentDefinitions } from 'pdfmake/interfaces';
+import * as XLSX from 'xlsx';
+import { PrismaService } from '../prisma.service';
+import { RegistrarNotaContingenciaDto_ga } from './dto/contingencia-nota.dto_ga';
+import { CrearPlanificacionDto_ga } from './dto/crear-planificacion.dto_ga';
 
 /**
- * PlanesEstudioService_ga — Elaboración, revisión y consumo de planes.
- *
- * El profesor llena las secciones y unidades definidas por la plantilla
- * institucional. La coordinación revisa, aprueba o devuelve.
- * Los alumnos consultan los planes aprobados de sus materias.
+ * Servicio Orientado a Objetos (POO + SOLID) para la Gestión de Planificación Curricular (_ga)
  */
 @Injectable()
 export class PlanesEstudioService_ga {
-  constructor(
-    private readonly prisma_ga: PrismaService,
-    private readonly plantillasService_ga: PlantillasService_ga,
-  ) {}
+  // Inyección de dependencias respetando Inversión de Control (DIP)
+  constructor(private readonly prisma: PrismaService) {}
 
-  /** Include estándar para las consultas de planes. */
-  private readonly includeCompleto_ga = {
-    materia_ga: {
-      include: {
-        carrera_cjgp: { select: { nombre_cjgp: true, codigo_cjgp: true } },
-      },
-    },
-    periodo_ga: true,
-    profesor_ga: {
-      select: {
-        id_usuario_ahbb: true,
-        nombre_ahbb: true,
-        apellido_ahbb: true,
-        cedula_ahbb: true,
-      },
-    },
-    plantilla_ga: {
-      include: {
-        secciones_ga: { orderBy: { orden_ga: 'asc' as const } },
-        niveles_ga: { orderBy: { orden_ga: 'asc' as const } },
-      },
-    },
-    contenidos_ga: {
-      include: { seccion_ga: true },
-      orderBy: { seccion_ga: { orden_ga: 'asc' as const } },
-    },
-    unidades_ga: {
-      include: {
-        indicadores_ga: {
-          include: { nivel_ga: true },
-          orderBy: { orden_ga: 'asc' as const },
-        },
-        itemEvaluacion_ga: true,
-      },
-      orderBy: { orden_ga: 'asc' as const },
-    },
-    revisiones_ga: {
-      include: {
-        revisor_ga: {
-          select: { nombre_ahbb: true, apellido_ahbb: true },
-        },
-      },
-      orderBy: { creadoEn_ga: 'desc' as const },
-    },
-  };
-
-  /** Planes del profesor autenticado en un período. */
-  async obtenerMisPlanes_ga(id_profesor_ga: number, id_periodo_ga: number) {
-    return this.prisma_ga.td_plan_estudio_ga.findMany({
-      where: { id_profesor_ga, id_periodo_ga },
-      include: this.includeCompleto_ga,
-      orderBy: { creadoEn_ga: 'desc' },
-    });
-  }
-
-  /** Detalle completo de un plan. */
-  async obtenerPorId_ga(id_plan_estudio_ga: number) {
-    const plan_ga = await this.prisma_ga.td_plan_estudio_ga.findUnique({
-      where: { id_plan_estudio_ga },
-      include: this.includeCompleto_ga,
-    });
-    if (!plan_ga) {
-      throw new NotFoundException('Plan de estudio no encontrado.');
-    }
-    return plan_ga;
+  /**
+   * Genera Hash SHA-256 para verificación digital de integridad del plan
+   */
+  private generarHashVerificacion_ga(contenido_ga: string): string {
+    return crypto.createHash('sha256').update(contenido_ga).digest('hex');
   }
 
   /**
-   * El profesor crea un plan para una de sus materias asignadas.
-   * Valida: materia asignada al profesor, plantilla publicada, unicidad.
+   * Valida las reglas de negocio del plan de evaluación
    */
-  async crear_ga(datos_ga: CrearPlanEstudioDto_ga, id_profesor_ga: number) {
-    // Verificar que la materia está asignada al profesor
-    const materia_ga = await this.prisma_ga.td_materia_cjgp.findUnique({
-      where: { id_materia_cjgp: datos_ga.id_materia_ga },
-    });
-    if (!materia_ga) {
-      throw new NotFoundException('Materia no encontrada.');
-    }
-    if (materia_ga.id_profesor_materia_cjgp !== id_profesor_ga) {
-      throw new ForbiddenException(
-        'Solo puedes elaborar el plan de las materias que tienes asignadas.',
-      );
-    }
+  private validarReglasNegocio_ga(dto_ga: CrearPlanificacionDto_ga): void {
+    console.log('[PlanesEstudioService_ga] Validando reglas de negocio para la planificación...');
 
-    // Verificar unicidad materia-período
-    const duplicado_ga = await this.prisma_ga.td_plan_estudio_ga.findFirst({
-      where: {
-        id_materia_ga: datos_ga.id_materia_ga,
-        id_periodo_ga: datos_ga.id_periodo_ga,
-      },
-    });
-    if (duplicado_ga) {
-      throw new BadRequestException(
-        'Ya existe un plan de estudio para esta materia en este período.',
-      );
+    // Rule 1: Agrupar actividades por lapso
+    const actividadesLapso1_ga = dto_ga.actividadesEvaluacion_ga.filter((a) => a.lapso_ga === 1);
+    const actividadesLapso2_ga = dto_ga.actividadesEvaluacion_ga.filter((a) => a.lapso_ga === 2);
+
+    // Rule 2: Límite máximo 4 evaluaciones por lapso
+    if (actividadesLapso1_ga.length > 4) {
+      throw new BadRequestException('El Lapso 1 no puede tener más de 4 actividades de evaluación.');
+    }
+    if (actividadesLapso2_ga.length > 4) {
+      throw new BadRequestException('El Lapso 2 no puede tener más de 4 actividades de evaluación.');
     }
 
-    // Obtener la plantilla vigente del período
-    const plantilla_ga = await this.plantillasService_ga.obtenerVigente_ga(
-      datos_ga.id_periodo_ga,
-    );
+    // Rule 3: En formato CUANTITATIVO, la suma debe ser exactamente 100% por lapso
+    if (dto_ga.formato_evaluacion_ga === 'CUANTITATIVO') {
+      const sumaLapso1_ga = actividadesLapso1_ga.reduce((acc, curr) => acc + Number(curr.porcentaje_ga), 0);
+      const sumaLapso2_ga = actividadesLapso2_ga.reduce((acc, curr) => acc + Number(curr.porcentaje_ga), 0);
 
-    // Validar cronograma contra las fechas del período
-    const periodo_ga =
-      await this.prisma_ga.td_periodo_academico_cjgp.findUnique({
-        where: { id_periodo_cjgp: datos_ga.id_periodo_ga },
-      });
-    if (!periodo_ga) {
-      throw new NotFoundException('Período no encontrado.');
-    }
-
-    if (datos_ga.unidades_ga) {
-      for (const unidad_ga of datos_ga.unidades_ga) {
-        const inicio_ga = new Date(unidad_ga.fecha_inicio_ga);
-        const fin_ga = new Date(unidad_ga.fecha_fin_ga);
-        if (inicio_ga >= fin_ga) {
-          throw new BadRequestException(
-            `La unidad "${unidad_ga.nombre_ga}" tiene la fecha de inicio posterior o igual a la de fin.`,
-          );
-        }
-        if (
-          inicio_ga < periodo_ga.fechaInicio_cjgp ||
-          fin_ga > periodo_ga.fechaFin_cjgp
-        ) {
-          throw new BadRequestException(
-            `La unidad "${unidad_ga.nombre_ga}" se sale del rango del período (${periodo_ga.fechaInicio_cjgp.toISOString().slice(0, 10)} a ${periodo_ga.fechaFin_cjgp.toISOString().slice(0, 10)}).`,
-          );
-        }
-      }
-    }
-
-    const plan_ga = await this.prisma_ga.$transaction(async (tx_ga) => {
-      const planCreado_ga = await tx_ga.td_plan_estudio_ga.create({
-        data: {
-          id_materia_ga: datos_ga.id_materia_ga,
-          id_periodo_ga: datos_ga.id_periodo_ga,
-          id_profesor_ga,
-          id_plantilla_ga: plantilla_ga.id_plantilla_ga,
-          estado_ga: 'BORRADOR',
-        },
-      });
-
-      // Crear contenidos de secciones
-      if (datos_ga.contenidos_ga) {
-        for (const contenido_ga of datos_ga.contenidos_ga) {
-          await tx_ga.td_contenido_seccion_ga.create({
-            data: {
-              id_plan_contenido_ga: planCreado_ga.id_plan_estudio_ga,
-              id_seccion_contenido_ga: contenido_ga.id_seccion_ga,
-              texto_ga: contenido_ga.texto_ga ?? null,
-            },
-          });
-        }
-      }
-
-      // Crear unidades con indicadores
-      if (datos_ga.unidades_ga) {
-        for (const unidad_ga of datos_ga.unidades_ga) {
-          const unidadCreada_ga = await tx_ga.td_unidad_ga.create({
-            data: {
-              id_plan_unidad_ga: planCreado_ga.id_plan_estudio_ga,
-              nombre_ga: unidad_ga.nombre_ga.trim(),
-              orden_ga: unidad_ga.orden_ga,
-              fecha_inicio_ga: new Date(unidad_ga.fecha_inicio_ga),
-              fecha_fin_ga: new Date(unidad_ga.fecha_fin_ga),
-              id_item_evaluacion_ga:
-                unidad_ga.id_item_evaluacion_ga ?? null,
-            },
-          });
-
-          if (unidad_ga.indicadores_ga) {
-            for (const indicador_ga of unidad_ga.indicadores_ga) {
-              await tx_ga.td_indicador_ga.create({
-                data: {
-                  id_unidad_indicador_ga: unidadCreada_ga.id_unidad_ga,
-                  descripcion_ga: indicador_ga.descripcion_ga.trim(),
-                  orden_ga: indicador_ga.orden_ga,
-                  valor_ga: indicador_ga.valor_ga ?? null,
-                  id_nivel_ga: indicador_ga.id_nivel_ga ?? null,
-                },
-              });
-            }
-          }
-        }
-      }
-
-      return planCreado_ga;
-    });
-
-    const planCompleto_ga = await this.obtenerPorId_ga(
-      plan_ga.id_plan_estudio_ga,
-    );
-
-    return {
-      exito: true,
-      plan: planCompleto_ga,
-      mensaje: `Plan de estudio para "${materia_ga.nombre_cjgp}" creado en estado BORRADOR.`,
-    };
-  }
-
-  /** Actualiza un plan (solo BORRADOR o DEVUELTO). */
-  async actualizar_ga(
-    id_plan_estudio_ga: number,
-    datos_ga: CrearPlanEstudioDto_ga,
-    id_profesor_ga: number,
-  ) {
-    const plan_ga = await this.obtenerPorId_ga(id_plan_estudio_ga);
-
-    if (plan_ga.id_profesor_ga !== id_profesor_ga) {
-      throw new ForbiddenException('Solo puedes editar tus propios planes.');
-    }
-    if (!['BORRADOR', 'DEVUELTO'].includes(plan_ga.estado_ga)) {
-      throw new BadRequestException(
-        `El plan está en estado "${plan_ga.estado_ga}" y no se puede editar.`,
-      );
-    }
-
-    // Validar cronograma
-    if (datos_ga.unidades_ga) {
-      const periodo_ga = plan_ga.periodo_ga;
-      for (const unidad_ga of datos_ga.unidades_ga) {
-        const inicio_ga = new Date(unidad_ga.fecha_inicio_ga);
-        const fin_ga = new Date(unidad_ga.fecha_fin_ga);
-        if (inicio_ga >= fin_ga) {
-          throw new BadRequestException(
-            `La unidad "${unidad_ga.nombre_ga}" tiene la fecha de inicio posterior o igual a la de fin.`,
-          );
-        }
-        if (
-          inicio_ga < periodo_ga.fechaInicio_cjgp ||
-          fin_ga > periodo_ga.fechaFin_cjgp
-        ) {
-          throw new BadRequestException(
-            `La unidad "${unidad_ga.nombre_ga}" se sale del rango del período.`,
-          );
-        }
-      }
-    }
-
-    await this.prisma_ga.$transaction(async (tx_ga) => {
-      // Limpiar contenidos y unidades previas
-      await tx_ga.td_contenido_seccion_ga.deleteMany({
-        where: { id_plan_contenido_ga: id_plan_estudio_ga },
-      });
-      await tx_ga.td_unidad_ga.deleteMany({
-        where: { id_plan_unidad_ga: id_plan_estudio_ga },
-      });
-
-      // Recrear contenidos
-      if (datos_ga.contenidos_ga) {
-        for (const contenido_ga of datos_ga.contenidos_ga) {
-          await tx_ga.td_contenido_seccion_ga.create({
-            data: {
-              id_plan_contenido_ga: id_plan_estudio_ga,
-              id_seccion_contenido_ga: contenido_ga.id_seccion_ga,
-              texto_ga: contenido_ga.texto_ga ?? null,
-            },
-          });
-        }
-      }
-
-      // Recrear unidades con indicadores
-      if (datos_ga.unidades_ga) {
-        for (const unidad_ga of datos_ga.unidades_ga) {
-          const unidadCreada_ga = await tx_ga.td_unidad_ga.create({
-            data: {
-              id_plan_unidad_ga: id_plan_estudio_ga,
-              nombre_ga: unidad_ga.nombre_ga.trim(),
-              orden_ga: unidad_ga.orden_ga,
-              fecha_inicio_ga: new Date(unidad_ga.fecha_inicio_ga),
-              fecha_fin_ga: new Date(unidad_ga.fecha_fin_ga),
-              id_item_evaluacion_ga:
-                unidad_ga.id_item_evaluacion_ga ?? null,
-            },
-          });
-
-          if (unidad_ga.indicadores_ga) {
-            for (const indicador_ga of unidad_ga.indicadores_ga) {
-              await tx_ga.td_indicador_ga.create({
-                data: {
-                  id_unidad_indicador_ga: unidadCreada_ga.id_unidad_ga,
-                  descripcion_ga: indicador_ga.descripcion_ga.trim(),
-                  orden_ga: indicador_ga.orden_ga,
-                  valor_ga: indicador_ga.valor_ga ?? null,
-                  id_nivel_ga: indicador_ga.id_nivel_ga ?? null,
-                },
-              });
-            }
-          }
-        }
-      }
-
-      // Si era DEVUELTO, vuelve a BORRADOR al editar
-      if (plan_ga.estado_ga === 'DEVUELTO') {
-        await tx_ga.td_plan_estudio_ga.update({
-          where: { id_plan_estudio_ga },
-          data: { estado_ga: 'BORRADOR', actualizadoEn_ga: new Date() },
-        });
-      } else {
-        await tx_ga.td_plan_estudio_ga.update({
-          where: { id_plan_estudio_ga },
-          data: { actualizadoEn_ga: new Date() },
-        });
-      }
-    });
-
-    return {
-      exito: true,
-      plan: await this.obtenerPorId_ga(id_plan_estudio_ga),
-      mensaje: 'Plan de estudio actualizado.',
-    };
-  }
-
-  /** El profesor entrega el plan para revisión de la coordinación. */
-  async entregar_ga(id_plan_estudio_ga: number, id_profesor_ga: number) {
-    const plan_ga = await this.obtenerPorId_ga(id_plan_estudio_ga);
-
-    if (plan_ga.id_profesor_ga !== id_profesor_ga) {
-      throw new ForbiddenException('Solo puedes entregar tus propios planes.');
-    }
-    if (!['BORRADOR', 'DEVUELTO'].includes(plan_ga.estado_ga)) {
-      throw new BadRequestException(
-        `El plan está en estado "${plan_ga.estado_ga}" y no se puede entregar.`,
-      );
-    }
-
-    // Validar que las secciones obligatorias tengan contenido
-    const seccionesObligatorias_ga = plan_ga.plantilla_ga.secciones_ga.filter(
-      (s_ga) => s_ga.obligatoria_ga,
-    );
-    for (const seccion_ga of seccionesObligatorias_ga) {
-      const contenido_ga = plan_ga.contenidos_ga.find(
-        (c_ga) => c_ga.id_seccion_contenido_ga === seccion_ga.id_seccion_ga,
-      );
-      if (!contenido_ga || !contenido_ga.texto_ga?.trim()) {
+      if (Math.abs(sumaLapso1_ga - 100) > 0.01) {
         throw new BadRequestException(
-          `La sección obligatoria "${seccion_ga.nombre_ga}" está vacía. Complétala antes de entregar.`,
+          `Las actividades del Lapso 1 deben sumar exactamente 100%. Suma actual: ${sumaLapso1_ga}%`,
+        );
+      }
+
+      if (Math.abs(sumaLapso2_ga - 100) > 0.01) {
+        throw new BadRequestException(
+          `Las actividades del Lapso 2 deben sumar exactamente 100%. Suma actual: ${sumaLapso2_ga}%`,
         );
       }
     }
-
-    if (plan_ga.unidades_ga.length === 0) {
-      throw new BadRequestException(
-        'El plan debe tener al menos una unidad temática con cronograma.',
-      );
-    }
-
-    await this.prisma_ga.td_plan_estudio_ga.update({
-      where: { id_plan_estudio_ga },
-      data: { estado_ga: 'ENTREGADO', actualizadoEn_ga: new Date() },
-    });
-
-    return {
-      exito: true,
-      mensaje: 'Plan de estudio entregado. La coordinación lo revisará.',
-    };
   }
-
-  // ─── Operaciones de la coordinación (Admin) ─────────────────
-
-  /** Bandeja de revisión: planes entregados por período. */
-  async obtenerBandeja_ga(id_periodo_ga: number) {
-    return this.prisma_ga.td_plan_estudio_ga.findMany({
-      where: { id_periodo_ga },
-      include: this.includeCompleto_ga,
-      orderBy: [{ estado_ga: 'asc' }, { actualizadoEn_ga: 'desc' }],
-    });
-  }
-
-  /** Aprobar o devolver un plan entregado. */
-  async revisar_ga(
-    id_plan_estudio_ga: number,
-    datos_ga: RevisarPlanDto_ga,
-    id_revisor_ga: number,
-  ) {
-    const plan_ga = await this.obtenerPorId_ga(id_plan_estudio_ga);
-
-    if (plan_ga.estado_ga !== 'ENTREGADO') {
-      throw new BadRequestException(
-        `Solo se pueden revisar planes en estado ENTREGADO (actual: ${plan_ga.estado_ga}).`,
-      );
-    }
-
-    if (
-      datos_ga.accion_ga === 'DEVUELTO' &&
-      !datos_ga.observacion_ga?.trim()
-    ) {
-      throw new BadRequestException(
-        'Debes indicar una observación al devolver el plan.',
-      );
-    }
-
-    await this.prisma_ga.$transaction(async (tx_ga) => {
-      // Registrar la revisión
-      await tx_ga.td_revision_plan_ga.create({
-        data: {
-          id_plan_revision_ga: id_plan_estudio_ga,
-          id_revisor_ga,
-          accion_ga: datos_ga.accion_ga,
-          observacion_ga: datos_ga.observacion_ga?.trim() ?? null,
-        },
-      });
-
-      const updateData_ga: any = {
-        estado_ga: datos_ga.accion_ga,
-        actualizadoEn_ga: new Date(),
-      };
-
-      // Al aprobar: generar código y hash de verificación
-      if (datos_ga.accion_ga === 'APROBADO') {
-        const contenidoVerificable_ga = JSON.stringify({
-          materia: plan_ga.materia_ga.codigo_cjgp,
-          periodo: plan_ga.periodo_ga.nombre_cjgp,
-          profesor: plan_ga.profesor_ga.cedula_ahbb,
-          unidades: plan_ga.unidades_ga.map((u_ga) => ({
-            nombre: u_ga.nombre_ga,
-            indicadores: u_ga.indicadores_ga.map((i_ga) => i_ga.descripcion_ga),
-          })),
-        });
-        updateData_ga.hashVerificacion_ga = crypto
-          .createHash('sha256')
-          .update(contenidoVerificable_ga)
-          .digest('hex');
-        updateData_ga.codigo_ga = `PE-${plan_ga.periodo_ga.nombre_cjgp}-${plan_ga.materia_ga.codigo_cjgp}-${Date.now().toString(36).toUpperCase()}`;
-      }
-
-      await tx_ga.td_plan_estudio_ga.update({
-        where: { id_plan_estudio_ga },
-        data: updateData_ga,
-      });
-    });
-
-    return {
-      exito: true,
-      mensaje:
-        datos_ga.accion_ga === 'APROBADO'
-          ? 'Plan de estudio aprobado correctamente.'
-          : 'Plan devuelto al profesor con observaciones.',
-    };
-  }
-
-  // ─── Vista del alumno ───────────────────────────────────────
-
-  /** Planes aprobados de las materias inscritas del alumno. */
-  async obtenerPlanesAlumno_ga(
-    id_alumno_ga: number,
-    id_periodo_ga: number,
-  ) {
-    // Obtener las materias inscritas del alumno en el período
-    const inscripciones_ga =
-      await this.prisma_ga.td_inscripcion_materia_cjgp.findMany({
-        where: {
-          id_usuario_im_cjgp: id_alumno_ga,
-          id_periodo_im_cjgp: id_periodo_ga,
-          estatus_cjgp: 'INSCRITO',
-        },
-        select: { id_materia_im_cjgp: true },
-      });
-
-    const idsMateria_ga = inscripciones_ga.map(
-      (i_ga) => i_ga.id_materia_im_cjgp,
-    );
-
-    return this.prisma_ga.td_plan_estudio_ga.findMany({
-      where: {
-        id_materia_ga: { in: idsMateria_ga },
-        id_periodo_ga,
-        estado_ga: 'APROBADO',
-      },
-      include: this.includeCompleto_ga,
-      orderBy: { materia_ga: { codigo_cjgp: 'asc' } },
-    });
-  }
-
-  // ─── Reporte con tabla temporal ─────────────────────────────
 
   /**
-   * Reporte de cumplimiento de planificación por período.
-   * Usa una TABLA TEMPORAL de PostgreSQL (ON COMMIT DROP).
+   * Guarda de forma atómica (con Rollback completo) la planificación completa
    */
-  async reporteCumplimiento_ga(id_periodo_ga: number) {
-    const periodo_ga =
-      await this.prisma_ga.td_periodo_academico_cjgp.findUnique({
-        where: { id_periodo_cjgp: id_periodo_ga },
+  async guardarPlanificacionCompleta_ga(
+    idProfesor_ga: number,
+    dto_ga: CrearPlanificacionDto_ga,
+  ) {
+    console.log(`[PlanesEstudioService_ga] Iniciando guardado de planificación para Profesor ID: ${idProfesor_ga}`);
+
+    // Ejecutar validaciones puras
+    this.validarReglasNegocio_ga(dto_ga);
+
+    try {
+      // Transacción Atómica con Rollback en bloque (ACID)
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Crear o actualizar la planificación (Cabecera)
+        const codigo_ga = `PLAN-MAT${dto_ga.id_materia_ga}-PER${dto_ga.id_periodo_ga}`;
+        const hash_ga = this.generarHashVerificacion_ga(JSON.stringify(dto_ga));
+
+        const planificacion_ga = await tx.td_planificaciones_ga.upsert({
+          where: {
+            id_materia_ga_id_periodo_ga: {
+              id_materia_ga: dto_ga.id_materia_ga,
+              id_periodo_ga: dto_ga.id_periodo_ga,
+            },
+          },
+          update: {
+            id_profesor_ga: idProfesor_ga,
+            programaUrl_ga: dto_ga.programaUrl_ga,
+            formato_evaluacion_ga: dto_ga.formato_evaluacion_ga,
+            estado_ga: 'ENTREGADO',
+            codigo_ga: codigo_ga,
+            hashVerificacion_ga: hash_ga,
+            actualizadoEn_ga: new Date(),
+          },
+          create: {
+            id_materia_ga: dto_ga.id_materia_ga,
+            id_periodo_ga: dto_ga.id_periodo_ga,
+            id_profesor_ga: idProfesor_ga,
+            programaUrl_ga: dto_ga.programaUrl_ga,
+            formato_evaluacion_ga: dto_ga.formato_evaluacion_ga,
+            estado_ga: 'ENTREGADO',
+            codigo_ga: codigo_ga,
+            hashVerificacion_ga: hash_ga,
+          },
+        });
+
+        // 2. Limpiar detalles didácticos y actividades anteriores (para permitir reemplazo limpio)
+        await tx.td_detalles_didacticos_ga.deleteMany({
+          where: { id_planificacion_ga: planificacion_ga.id_planificacion_ga },
+        });
+        await tx.td_actividades_evaluacion_ga.deleteMany({
+          where: { id_planificacion_ga: planificacion_ga.id_planificacion_ga },
+        });
+
+        // 3. Insertar Detalles Didácticos por Lapso
+        for (const detalle_ga of dto_ga.detallesDidacticos_ga) {
+          await tx.td_detalles_didacticos_ga.create({
+            data: {
+              id_planificacion_ga: planificacion_ga.id_planificacion_ga,
+              lapso_ga: detalle_ga.lapso_ga,
+              unidad_tematica_ga: detalle_ga.unidad_tematica_ga,
+              estrategia_ga: detalle_ga.estrategia_ga,
+              recursos_ga: detalle_ga.recursos_ga,
+              orden_ga: detalle_ga.orden_ga,
+            },
+          });
+        }
+
+        // 4. Insertar Actividades de Evaluación e Indicadores
+        for (const act_ga of dto_ga.actividadesEvaluacion_ga) {
+          const actividadCreada_ga = await tx.td_actividades_evaluacion_ga.create({
+            data: {
+              id_planificacion_ga: planificacion_ga.id_planificacion_ga,
+              lapso_ga: act_ga.lapso_ga,
+              nombre_actividad_ga: act_ga.nombre_actividad_ga,
+              tipo_evaluacion_ga: act_ga.tipo_evaluacion_ga,
+              porcentaje_ga: act_ga.porcentaje_ga,
+              fecha_evaluacion_ga: (act_ga.fecha_evaluacion_ga && !isNaN(Date.parse(act_ga.fecha_evaluacion_ga)))
+                ? new Date(act_ga.fecha_evaluacion_ga)
+                : new Date(),
+              orden_ga: act_ga.orden_ga,
+            },
+          });
+
+          if (act_ga.indicadores_ga && act_ga.indicadores_ga.length > 0) {
+            for (const ind_ga of act_ga.indicadores_ga) {
+              await tx.td_indicadores_logro_ga.create({
+                data: {
+                  id_actividad_evaluacion_ga: actividadCreada_ga.id_actividad_evaluacion_ga,
+                  descripcion_ga: ind_ga.descripcion_ga,
+                  criterio_cualitativo_ga: ind_ga.criterio_cualitativo_ga,
+                },
+              });
+            }
+          }
+        }
+
+        console.log(`[PlanesEstudioService_ga] Transacción ejecutada con éxito. Planificación ID: ${planificacion_ga.id_planificacion_ga}`);
+        return planificacion_ga;
       });
-    if (!periodo_ga) {
-      throw new NotFoundException('Período no encontrado.');
+    } catch (error_ga: any) {
+      console.error('[PlanesEstudioService_ga] Error en transacción. Ejecutando Rollback automáticamente:', error_ga.message);
+      if (error_ga instanceof BadRequestException) {
+        throw error_ga;
+      }
+      throw new InternalServerErrorException(`Fallo al guardar la planificación: ${error_ga.message}`);
     }
-
-    const filas_ga = await this.prisma_ga.$transaction(async (tx_ga) => {
-      await tx_ga.$executeRaw`
-        CREATE TEMP TABLE tmp_cumplimiento_ga ON COMMIT DROP AS
-        SELECT
-          c."id_carrera_cjgp"                                       AS id_carrera,
-          c."codigo_cjgp"                                           AS codigo_carrera,
-          c."nombre_cjgp"                                           AS carrera,
-          COUNT(DISTINCT m."id_materia_cjgp")::int                  AS total_materias,
-          COUNT(DISTINCT pe."id_plan_estudio_ga")
-            FILTER (WHERE pe."estado_ga" IS NOT NULL)::int          AS con_plan,
-          COUNT(DISTINCT pe."id_plan_estudio_ga")
-            FILTER (WHERE pe."estado_ga" = 'APROBADO')::int         AS aprobados,
-          COUNT(DISTINCT pe."id_plan_estudio_ga")
-            FILTER (WHERE pe."estado_ga" = 'ENTREGADO')::int        AS entregados,
-          COUNT(DISTINCT pe."id_plan_estudio_ga")
-            FILTER (WHERE pe."estado_ga" = 'DEVUELTO')::int         AS devueltos,
-          COUNT(DISTINCT pe."id_plan_estudio_ga")
-            FILTER (WHERE pe."estado_ga" = 'BORRADOR')::int         AS borradores
-        FROM "td_materia_cjgp" m
-        JOIN "td_carrera_cjgp" c ON c."id_carrera_cjgp" = m."id_carrera_materia_cjgp"
-        LEFT JOIN "td_plan_estudio_ga" pe
-          ON pe."id_materia_ga" = m."id_materia_cjgp"
-          AND pe."id_periodo_ga" = ${id_periodo_ga}
-        WHERE m."id_profesor_materia_cjgp" IS NOT NULL
-        GROUP BY c."id_carrera_cjgp", c."codigo_cjgp", c."nombre_cjgp"
-      `;
-
-      return tx_ga.$queryRaw<any[]>`
-        SELECT *,
-               CASE WHEN total_materias > 0
-                    THEN ROUND(aprobados::numeric * 100 / total_materias, 1)::float
-                    ELSE 0
-               END AS porcentaje_aprobados,
-               total_materias - con_plan AS sin_plan
-        FROM tmp_cumplimiento_ga
-        ORDER BY carrera
-      `;
-    });
-
-    return {
-      periodo: periodo_ga,
-      totalCarreras: filas_ga.length,
-      filas: filas_ga,
-    };
   }
 
-  // ─── Export PDF ─────────────────────────────────────────────
+  /**
+   * Obtiene la planificación completa por materia y período
+   */
+  async obtenerPlanificacionPorMateriaPeriodo_ga(
+    idMateria_ga: number,
+    idPeriodo_ga: number,
+  ) {
+    console.log(`[PlanesEstudioService_ga] Consultando planificación para Materia: ${idMateria_ga}, Período: ${idPeriodo_ga}`);
 
-  /** Genera el PDF del plan aprobado con pdfmake. */
-  async generarPdf_ga(id_plan_estudio_ga: number): Promise<Buffer> {
-    const plan_ga = await this.obtenerPorId_ga(id_plan_estudio_ga);
+    const planificacion_ga = await this.prisma.td_planificaciones_ga.findUnique({
+      where: {
+        id_materia_ga_id_periodo_ga: {
+          id_materia_ga: Number(idMateria_ga),
+          id_periodo_ga: Number(idPeriodo_ga),
+        },
+      },
+      include: {
+        materia_ga: true,
+        periodo_ga: true,
+        profesor_ga: {
+          select: {
+            id_usuario_ahbb: true,
+            nombre_ahbb: true,
+            apellido_ahbb: true,
+            correo_ahbb: true,
+          },
+        },
+        detallesDidacticos_ga: {
+          orderBy: [{ lapso_ga: 'asc' }, { orden_ga: 'asc' }],
+        },
+        actividadesEvaluacion_ga: {
+          orderBy: [{ lapso_ga: 'asc' }, { orden_ga: 'asc' }],
+          include: {
+            indicadoresLogro_ga: true,
+          },
+        },
+        revisiones_ga: {
+          orderBy: { creadoEn_ga: 'desc' },
+        },
+      },
+    });
 
-    if (plan_ga.estado_ga !== 'APROBADO') {
-      throw new BadRequestException(
-        'Solo se pueden exportar planes en estado APROBADO.',
-      );
+    if (!planificacion_ga) {
+      throw new NotFoundException('No existe planificación registrada para la materia y período indicados.');
     }
 
-    const fonts_ga = {
-      Roboto: {
-        normal: 'node_modules/pdfmake/build/vfs_fonts/Roboto-Regular.ttf',
-        bold: 'node_modules/pdfmake/build/vfs_fonts/Roboto-Medium.ttf',
-        italics: 'node_modules/pdfmake/build/vfs_fonts/Roboto-Italic.ttf',
-        bolditalics:
-          'node_modules/pdfmake/build/vfs_fonts/Roboto-MediumItalic.ttf',
-      },
-    };
-    const printer_ga = new PdfPrinter(fonts_ga);
+    return planificacion_ga;
+  }
 
-    // Construir contenido del PDF dinámicamente desde metadatos
-    const contenidoPdf_ga: any[] = [
-      {
-        text: 'PLAN DE ESTUDIO',
-        style: 'titulo',
-        alignment: 'center',
-        margin: [0, 0, 0, 5],
+  /**
+   * Endpoint de Contingencia Exclusivo para el Rol de Jefe de Control de Estudio
+   */
+  async registrarNotaContingencia_ga(
+    idUsuarioControl_ga: number,
+    dto_ga: RegistrarNotaContingenciaDto_ga,
+  ) {
+    console.log(`[PlanesEstudioService_ga] Ejecutando registro de nota por contingencia de Control de Estudio (ID: ${idUsuarioControl_ga})`);
+
+    // Validar inscripción del alumno en la materia y período
+    const inscripcion_ga = await this.prisma.td_inscripcion_materia_cjgp.findUnique({
+      where: {
+        id_usuario_im_cjgp_id_materia_im_cjgp_id_periodo_im_cjgp: {
+          id_usuario_im_cjgp: dto_ga.id_alumno_ga,
+          id_materia_im_cjgp: dto_ga.id_materia_ga,
+          id_periodo_im_cjgp: dto_ga.id_periodo_ga,
+        },
       },
-      {
-        text: `Academia H&B — ${plan_ga.periodo_ga.nombre_cjgp}`,
-        alignment: 'center',
-        fontSize: 11,
-        color: '#555',
-        margin: [0, 0, 0, 15],
+    });
+
+    if (!inscripcion_ga) {
+      throw new NotFoundException('El alumno no posee inscripción en la materia y período indicados.');
+    }
+
+    // Actualizar nota final e inscripción en contingencia
+    const estatus_ga = dto_ga.nota_final_ga >= 10 ? 'APROBADO' : 'REPROBADO';
+
+    const resultado_ga = await this.prisma.$transaction(async (tx) => {
+      const inscripcionActualizada_ga = await tx.td_inscripcion_materia_cjgp.update({
+        where: { id_inscripcion_materia_cjgp: inscripcion_ga.id_inscripcion_materia_cjgp },
+        data: {
+          notaFinal_cjgp: dto_ga.nota_final_ga,
+          estatus_cjgp: estatus_ga,
+          actualizadoEn_cjgp: new Date(),
+        },
+      });
+
+      // Registrar auditoría en la bitácora del sistema (_jc)
+      await tx.td_auditoria_jc.create({
+        data: {
+          modulo_jc: 'CONTROL_ESTUDIOS',
+          accion_jc: 'NOTA_CONTINGENCIA_REGISTRADA',
+          descripcion_jc: `Jefe de Control de Estudios (ID: ${idUsuarioControl_ga}) registró nota por contingencia de ${dto_ga.nota_final_ga} pts al alumno ID: ${dto_ga.id_alumno_ga}. Motivo: ${dto_ga.observacion_ga}`,
+          resultado_jc: 'EXITO',
+          id_usuario_auditoria_jc: idUsuarioControl_ga,
+          id_afectado_jc: dto_ga.id_alumno_ga,
+          id_materia_aud_jc: dto_ga.id_materia_ga,
+          id_periodo_aud_jc: dto_ga.id_periodo_ga,
+        },
+      });
+
+      return inscripcionActualizada_ga;
+    });
+
+    console.log(`[PlanesEstudioService_ga] Nota de contingencia registrada exitosamente.`);
+    return resultado_ga;
+  }
+
+  /**
+   * Obtiene la bandeja de revisión de planes para un período (Admin / Control de Estudios)
+   */
+  async obtenerBandejaRevision_ga(idPeriodo_ga: number) {
+    console.log(`[PlanesEstudioService_ga] Consultando bandeja de revisión para período: ${idPeriodo_ga}`);
+
+    const planes_ga = await this.prisma.td_planificaciones_ga.findMany({
+      where: {
+        id_periodo_ga: Number(idPeriodo_ga),
       },
-      {
-        columns: [
-          { text: `Materia: ${plan_ga.materia_ga.codigo_cjgp} — ${plan_ga.materia_ga.nombre_cjgp}`, bold: true },
-          {
-            text: `Profesor: ${plan_ga.profesor_ga.nombre_ahbb} ${plan_ga.profesor_ga.apellido_ahbb}`,
-            alignment: 'right',
+      include: {
+        materia_ga: {
+          include: {
+            carrera_cjgp: true,
           },
-        ],
-        margin: [0, 0, 0, 5],
+        },
+        periodo_ga: true,
+        profesor_ga: {
+          select: {
+            id_usuario_ahbb: true,
+            nombre_ahbb: true,
+            apellido_ahbb: true,
+            correo_ahbb: true,
+          },
+        },
+        detallesDidacticos_ga: {
+          orderBy: [{ lapso_ga: 'asc' }, { orden_ga: 'asc' }],
+        },
+        actividadesEvaluacion_ga: {
+          orderBy: [{ lapso_ga: 'asc' }, { orden_ga: 'asc' }],
+          include: {
+            indicadoresLogro_ga: true,
+          },
+        },
+        revisiones_ga: {
+          orderBy: { creadoEn_ga: 'desc' },
+        },
+      },
+      orderBy: { actualizadoEn_ga: 'desc' },
+    });
+
+    return planes_ga;
+  }
+
+  /**
+   * Revisa un plan de estudio (Aprobar o Devolver con observaciones)
+   */
+  async revisarPlan_ga(
+    idPlanificacion_ga: number,
+    idRevisor_ga: number,
+    accion_ga: 'APROBADO' | 'DEVUELTO',
+    observacion_ga?: string,
+  ) {
+    console.log(`[PlanesEstudioService_ga] Revisando plan ${idPlanificacion_ga} por Revisor ${idRevisor_ga} → Acción: ${accion_ga}`);
+
+    const plan_ga = await this.prisma.td_planificaciones_ga.findUnique({
+      where: { id_planificacion_ga: Number(idPlanificacion_ga) },
+    });
+
+    if (!plan_ga) {
+      throw new NotFoundException('Planificación no encontrada.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Actualizar estado del plan
+      const planActualizado_ga = await tx.td_planificaciones_ga.update({
+        where: { id_planificacion_ga: Number(idPlanificacion_ga) },
+        data: {
+          estado_ga: accion_ga,
+          actualizadoEn_ga: new Date(),
+        },
+      });
+
+      // 2. Registrar historial de revisión
+      await tx.td_revisiones_plan_ga.create({
+        data: {
+          id_planificacion_ga: Number(idPlanificacion_ga),
+          id_revisor_ga: idRevisor_ga,
+          accion_ga: accion_ga,
+          observacion_ga: observacion_ga || null,
+        },
+      });
+
+      return planActualizado_ga;
+    });
+  }
+
+  /**
+   * Genera la Plantilla Excel (.xlsx) Oficial para el Cronograma de Planificación Curricular (_ga)
+   */
+  generarPlantillaExcel_ga(): Buffer {
+    console.log('[PlanesEstudioService_ga] Generando plantilla Excel de cronograma');
+
+    // Fila de ejemplo 1 (Lapso 1)
+    const filasPlantilla_ga = [
+      {
+        Lapso: 1,
+        'Unidad Temática': 'Unidad I: Fundamentos y Conceptos Básicos',
+        'Estrategia Didáctica': 'Clases teóricas magistrales y talleres',
+        'Recursos Instruccionales': 'Proyector, Guía de ejercicios en PDF',
+        'Nombre Actividad Evaluativa': 'Examen Parcial I',
+        'Tipo Evaluación': 'EXAMEN',
+        'Porcentaje (%)': 50,
+        'Fecha Estimada (AAAA-MM-DD)': '2026-08-15',
+        'Indicador de Logro': 'Demuestra dominio de conceptos teóricos fundamentales',
       },
       {
-        columns: [
-          { text: `Código: ${plan_ga.codigo_ga}`, fontSize: 9, color: '#777' },
-          {
-            text: `Hash: ${plan_ga.hashVerificacion_ga?.substring(0, 16)}...`,
-            fontSize: 9,
-            color: '#777',
-            alignment: 'right',
-          },
-        ],
-        margin: [0, 0, 0, 15],
+        Lapso: 1,
+        'Unidad Temática': 'Unidad I: Fundamentos y Conceptos Básicos',
+        'Estrategia Didáctica': 'Clases teóricas magistrales y talleres',
+        'Recursos Instruccionales': 'Proyector, Guía de ejercicios en PDF',
+        'Nombre Actividad Evaluativa': 'Taller Práctico I',
+        'Tipo Evaluación': 'TALLER',
+        'Porcentaje (%)': 50,
+        'Fecha Estimada (AAAA-MM-DD)': '2026-08-30',
+        'Indicador de Logro': 'Aplica los algoritmos aprendidos en la solución de ejercicios',
+      },
+      {
+        Lapso: 2,
+        'Unidad Temática': 'Unidad II: Aplicaciones Avanzadas y Proyectos',
+        'Estrategia Didáctica': 'Resolución de problemas en grupo y laboratorios',
+        'Recursos Instruccionales': 'Laboratorio de Computación, Guías de código',
+        'Nombre Actividad Evaluativa': 'Examen Parcial II',
+        'Tipo Evaluación': 'EXAMEN',
+        'Porcentaje (%)': 50,
+        'Fecha Estimada (AAAA-MM-DD)': '2026-09-15',
+        'Indicador de Logro': 'Resuelve problemas avanzados con rigor metodológico',
+      },
+      {
+        Lapso: 2,
+        'Unidad Temática': 'Unidad II: Aplicaciones Avanzadas y Proyectos',
+        'Estrategia Didáctica': 'Resolución de problemas en grupo y laboratorios',
+        'Recursos Instruccionales': 'Laboratorio de Computación, Guías de código',
+        'Nombre Actividad Evaluativa': 'Proyecto Final Integrador',
+        'Tipo Evaluación': 'PROYECTO',
+        'Porcentaje (%)': 50,
+        'Fecha Estimada (AAAA-MM-DD)': '2026-09-30',
+        'Indicador de Logro': 'Desarrolla un proyecto funcional aplicando todas las unidades',
       },
     ];
 
-    // Secciones (generadas desde metadatos de la plantilla)
-    for (const seccion_ga of plan_ga.plantilla_ga.secciones_ga) {
-      const contenido_ga = plan_ga.contenidos_ga.find(
-        (c_ga) => c_ga.id_seccion_contenido_ga === seccion_ga.id_seccion_ga,
-      );
-      contenidoPdf_ga.push(
-        { text: seccion_ga.nombre_ga, style: 'subtitulo', margin: [0, 10, 0, 3] },
-        {
-          text: contenido_ga?.texto_ga || '(Sin completar)',
-          margin: [0, 0, 0, 5],
-          color: contenido_ga?.texto_ga ? '#333' : '#999',
-        },
-      );
-    }
+    const hoja_ga = XLSX.utils.json_to_sheet(filasPlantilla_ga);
 
-    // Cronograma (tabla de unidades)
-    if (plan_ga.unidades_ga.length > 0) {
-      contenidoPdf_ga.push(
-        { text: 'Cronograma de Unidades', style: 'subtitulo', margin: [0, 15, 0, 5] },
-      );
+    // Ajustar ancho de columnas para visualización amigable
+    hoja_ga['!cols'] = [
+      { wch: 8 },  // Lapso
+      { wch: 38 }, // Unidad Temática
+      { wch: 38 }, // Estrategia Didáctica
+      { wch: 32 }, // Recursos
+      { wch: 28 }, // Nombre Actividad
+      { wch: 18 }, // Tipo Evaluación
+      { wch: 15 }, // Porcentaje (%)
+      { wch: 22 }, // Fecha
+      { wch: 45 }, // Indicador
+    ];
 
-      const tablaUnidades_ga: any = {
-        table: {
-          headerRows: 1,
-          widths: ['auto', '*', 'auto', 'auto', 'auto'],
-          body: [
-            [
-              { text: '#', bold: true, fillColor: '#1a237e', color: '#fff' },
-              { text: 'Unidad', bold: true, fillColor: '#1a237e', color: '#fff' },
-              { text: 'Inicio', bold: true, fillColor: '#1a237e', color: '#fff' },
-              { text: 'Fin', bold: true, fillColor: '#1a237e', color: '#fff' },
-              { text: 'Evaluación', bold: true, fillColor: '#1a237e', color: '#fff' },
-            ],
-          ],
-        },
-        layout: 'lightHorizontalLines',
-      };
+    const libro_ga = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro_ga, hoja_ga, 'Cronograma UNE');
 
-      for (const unidad_ga of plan_ga.unidades_ga) {
-        tablaUnidades_ga.table.body.push([
-          unidad_ga.orden_ga.toString(),
-          unidad_ga.nombre_ga,
-          new Date(unidad_ga.fecha_inicio_ga).toLocaleDateString('es-VE'),
-          new Date(unidad_ga.fecha_fin_ga).toLocaleDateString('es-VE'),
-          unidad_ga.itemEvaluacion_ga?.nombre_jc ?? '—',
-        ]);
+    return XLSX.write(libro_ga, { type: 'buffer', bookType: 'xlsx' });
+  }
+
+  /**
+   * Procesa la subida de un archivo Excel (.xlsx) y extrae las actividades y detalles didácticos (_ga)
+   */
+  importarCronogramaExcel_ga(bufferArchivo_ga: Buffer) {
+    console.log('[PlanesEstudioService_ga] Procesando archivo Excel para importación de cronograma');
+
+    try {
+      const libro_ga = XLSX.read(bufferArchivo_ga, { type: 'buffer' });
+      const primeraHojaNombre_ga = libro_ga.SheetNames[0];
+      const hoja_ga = libro_ga.Sheets[primeraHojaNombre_ga];
+
+      if (!hoja_ga) {
+        throw new BadRequestException('El archivo Excel no contiene hojas de datos válidas.');
       }
-      contenidoPdf_ga.push(tablaUnidades_ga);
 
-      // Indicadores por unidad
-      for (const unidad_ga of plan_ga.unidades_ga) {
-        if (unidad_ga.indicadores_ga.length > 0) {
-          contenidoPdf_ga.push(
-            {
-              text: `Indicadores — ${unidad_ga.nombre_ga}`,
-              style: 'subtitulo',
-              fontSize: 10,
-              margin: [0, 10, 0, 3],
-            },
-            {
-              ul: unidad_ga.indicadores_ga.map((ind_ga) => {
-                let texto_ga = ind_ga.descripcion_ga;
-                if (ind_ga.valor_ga != null) {
-                  texto_ga += ` (Valor: ${ind_ga.valor_ga})`;
-                }
-                if (ind_ga.nivel_ga) {
-                  texto_ga += ` [${ind_ga.nivel_ga.etiqueta_ga}]`;
-                }
-                return texto_ga;
-              }),
-              margin: [10, 0, 0, 5],
-            },
-          );
+      const filas_ga: any[] = XLSX.utils.sheet_to_json(hoja_ga);
+
+      if (!filas_ga || filas_ga.length === 0) {
+        throw new BadRequestException('El archivo Excel está vacío o no contiene filas con encabezados válidos.');
+      }
+
+      const detallesDidacticos_ga: any[] = [];
+      const actividadesEvaluacion_ga: any[] = [];
+
+      // Mapear filas a la estructura del DTO
+      for (const fila_ga of filas_ga) {
+        const lapso_ga = Number(fila_ga['Lapso'] || fila_ga['lapso'] || 1);
+        const unidad_tematica_ga = String(fila_ga['Unidad Temática'] || fila_ga['unidad_tematica'] || '').trim();
+        const estrategia_ga = String(fila_ga['Estrategia Didáctica'] || fila_ga['estrategia'] || '').trim();
+        const recursos_ga = String(fila_ga['Recursos Instruccionales'] || fila_ga['recursos'] || '').trim();
+
+        const nombre_actividad_ga = String(fila_ga['Nombre Actividad Evaluativa'] || fila_ga['nombre_actividad'] || '').trim();
+        const tipo_evaluacion_ga = String(fila_ga['Tipo Evaluación'] || fila_ga['tipo'] || 'TALLER').trim().toUpperCase();
+        const porcentaje_ga = Number(fila_ga['Porcentaje (%)'] || fila_ga['porcentaje'] || 0);
+        const fecha_evaluacion_ga = String(fila_ga['Fecha Estimada (AAAA-MM-DD)'] || fila_ga['fecha'] || '').trim();
+        const descripcion_indicador_ga = String(fila_ga['Indicador de Logro'] || fila_ga['indicador'] || '').trim();
+
+        // Acumular detalle didáctico por lapso (evitar duplicados de la misma unidad en el lapso)
+        let detalleExistente_ga = detallesDidacticos_ga.find((d) => d.lapso_ga === lapso_ga);
+        if (!detalleExistente_ga && (unidad_tematica_ga || estrategia_ga || recursos_ga)) {
+          detallesDidacticos_ga.push({
+            lapso_ga,
+            unidad_tematica_ga: unidad_tematica_ga || `Unidad Temática Lapso ${lapso_ga}`,
+            estrategia_ga: estrategia_ga || 'Estrategias didácticas variadas',
+            recursos_ga: recursos_ga || 'Recursos didácticos de la materia',
+            orden_ga: 1,
+          });
+        }
+
+        // Acumular actividad evaluativa
+        if (nombre_actividad_ga) {
+          const countActividadesLapso_ga = actividadesEvaluacion_ga.filter((a) => a.lapso_ga === lapso_ga).length;
+          if (countActividadesLapso_ga >= 4) {
+            throw new BadRequestException(`El Lapso ${lapso_ga} en el Excel supera el límite máximo de 4 evaluaciones.`);
+          }
+
+          actividadesEvaluacion_ga.push({
+            lapso_ga,
+            nombre_actividad_ga,
+            tipo_evaluacion_ga,
+            porcentaje_ga,
+            fecha_evaluacion_ga: fecha_evaluacion_ga || new Date().toISOString().split('T')[0],
+            orden_ga: countActividadesLapso_ga + 1,
+            descripcion_indicador_ga,
+          });
         }
       }
+
+      // Validar reglas de suma porcentual 100% si hay actividades
+      const sumaLapso1_ga = actividadesEvaluacion_ga.filter((a) => a.lapso_ga === 1).reduce((acc, c) => acc + Number(c.porcentaje_ga), 0);
+      const sumaLapso2_ga = actividadesEvaluacion_ga.filter((a) => a.lapso_ga === 2).reduce((acc, c) => acc + Number(c.porcentaje_ga), 0);
+
+      if (actividadesEvaluacion_ga.length > 0) {
+        if (Math.abs(sumaLapso1_ga - 100) > 0.01) {
+          throw new BadRequestException(`Las actividades del Lapso 1 en el Excel deben sumar 100%. Suma actual: ${sumaLapso1_ga}%`);
+        }
+        if (Math.abs(sumaLapso2_ga - 100) > 0.01) {
+          throw new BadRequestException(`Las actividades del Lapso 2 en el Excel deben sumar 100%. Suma actual: ${sumaLapso2_ga}%`);
+        }
+      }
+
+      console.log(`[PlanesEstudioService_ga] Importación Excel exitosa: ${actividadesEvaluacion_ga.length} actividades procesadas.`);
+
+      return {
+        exito_ga: true,
+        mensaje_ga: 'Cronograma importado exitosamente desde Excel.',
+        detallesDidacticos_ga,
+        actividadesEvaluacion_ga,
+        formato_evaluacion_ga: 'CUANTITATIVO',
+      };
+    } catch (error_ga: any) {
+      console.error('[PlanesEstudioService_ga] Error al importar Excel:', error_ga.message);
+      if (error_ga instanceof BadRequestException) throw error_ga;
+      throw new BadRequestException(`Error al procesar el archivo Excel: ${error_ga.message}`);
+    }
+  }
+
+  /**
+   * Exporta la planificación activa de una materia en formato Excel (.xlsx)
+   */
+  async exportarPlanExcel_ga(idMateria_ga: number, idPeriodo_ga: number): Promise<Buffer> {
+    console.log(`[PlanesEstudioService_ga] Exportando planificación a Excel: Materia ${idMateria_ga}, Período ${idPeriodo_ga}`);
+
+    const plan_ga = await this.obtenerPlanificacionPorMateriaPeriodo_ga(idMateria_ga, idPeriodo_ga);
+
+    const filas_ga: any[] = [];
+
+    for (const act_ga of plan_ga.actividadesEvaluacion_ga) {
+      const det_ga = plan_ga.detallesDidacticos_ga.find((d) => d.lapso_ga === act_ga.lapso_ga);
+
+      filas_ga.push({
+        Lapso: act_ga.lapso_ga,
+        'Unidad Temática': det_ga?.unidad_tematica_ga || '',
+        'Estrategia Didáctica': det_ga?.estrategia_ga || '',
+        'Recursos Instruccionales': det_ga?.recursos_ga || '',
+        'Nombre Actividad Evaluativa': act_ga.nombre_actividad_ga,
+        'Tipo Evaluación': act_ga.tipo_evaluacion_ga,
+        'Porcentaje (%)': Number(act_ga.porcentaje_ga),
+        'Fecha Estimada (AAAA-MM-DD)': act_ga.fecha_evaluacion_ga ? new Date(act_ga.fecha_evaluacion_ga).toISOString().split('T')[0] : '',
+        'Indicador de Logro': act_ga.indicadoresLogro_ga?.[0]?.descripcion_ga || '',
+      });
     }
 
-    const definicion_ga: TDocumentDefinitions = {
-      content: contenidoPdf_ga,
-      styles: {
-        titulo: { fontSize: 16, bold: true, color: '#1a237e' },
-        subtitulo: { fontSize: 12, bold: true, color: '#283593' },
-      },
-      defaultStyle: { fontSize: 10 },
-      footer: (currentPage_ga: number, pageCount_ga: number) => ({
-        text: `Página ${currentPage_ga} de ${pageCount_ga} — Documento generado el ${new Date().toLocaleString('es-VE')}`,
-        alignment: 'center',
-        fontSize: 8,
-        color: '#aaa',
-        margin: [0, 10, 0, 0],
-      }),
-    };
+    const hoja_ga = XLSX.utils.json_to_sheet(filas_ga);
+    hoja_ga['!cols'] = [
+      { wch: 8 },  { wch: 38 }, { wch: 38 }, { wch: 32 },
+      { wch: 28 }, { wch: 18 }, { wch: 15 }, { wch: 22 }, { wch: 45 },
+    ];
 
-    const pdfDoc_ga = await printer_ga.createPdfKitDocument(definicion_ga);
+    const libro_ga = XLSX.utils.book_new();
+    const nombreHoja_ga = `${plan_ga.materia_ga?.codigo_cjgp || 'MAT'}_${plan_ga.periodo_ga?.nombre_cjgp || 'PER'}`;
+    XLSX.utils.book_append_sheet(libro_ga, hoja_ga, nombreHoja_ga);
 
-    return new Promise<Buffer>((resolve_ga, reject_ga) => {
-      const chunks_ga: Uint8Array[] = [];
-      pdfDoc_ga.on('data', (chunk_ga: Uint8Array) =>
-        chunks_ga.push(chunk_ga),
-      );
-      pdfDoc_ga.on('end', () => resolve_ga(Buffer.concat(chunks_ga)));
-      pdfDoc_ga.on('error', reject_ga);
-      pdfDoc_ga.end();
-    });
+    return XLSX.write(libro_ga, { type: 'buffer', bookType: 'xlsx' });
   }
 }
+

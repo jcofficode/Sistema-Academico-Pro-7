@@ -33,8 +33,9 @@ const MENU_ADMINISTRADOR_AHBB = [
   { icono: 'dataset', etiqueta: 'Consola Control Estudios', ruta: '/admin/control-estudios' },
   { icono: 'fact_check', etiqueta: 'Auditoría Académica', ruta: '/control-estudios/auditoria' },
 
-  // ─── Planificación (GA) ───
-  { icono: 'format_list_bulleted', etiqueta: 'Plantillas de Plan', ruta: '/admin/plan-estudio/plantillas', encabezado: 'Planificación (GA)', separador: true },
+  // ─── Control de Estudios (GA) ───
+  { icono: 'warning', etiqueta: 'Nota por Contingencia', ruta: '/control-estudios/contingencia', encabezado: 'Control de Estudios (GA)', separador: true },
+  { icono: 'tune', etiqueta: 'Configuración Curricular', ruta: '/admin/plan-estudio/configuracion-curricular' },
   { icono: 'checklist_rtl', etiqueta: 'Bandeja de Revisión', ruta: '/admin/plan-estudio/bandeja' },
 
   // ─── Cursos libres del sistema original (independientes de la carrera) ───
@@ -64,8 +65,8 @@ const MENU_PROFESOR_AHBB = [
   { icono: 'history_edu', etiqueta: 'Mi Historial de Materias', ruta: '/profesor/historial-materias' },
   { icono: 'grading', etiqueta: 'Carga de Notas y Actas', ruta: '/control-estudios/carga-notas', encabezado: 'Control de Estudios (JC)', separador: true },
 
-  // ─── Planificación (GA) ───
-  { icono: 'edit_note', etiqueta: 'Elaborar Plan de Estudio', ruta: '/profesor/plan-estudio', encabezado: 'Planificación (GA)', separador: true },
+  // ─── Control de Estudios (GA) ───
+  { icono: 'edit_note', etiqueta: 'Elaborar Plan de Estudio', ruta: '/profesor/plan-estudio', encabezado: 'Control de Estudios (GA)', separador: true },
 
   // ─── Cursos libres del sistema original ───
   { icono: 'school', etiqueta: 'Mis Cursos', ruta: '/cursos', encabezado: 'Cursos Extracurriculares', separador: true },
@@ -94,6 +95,10 @@ const MENU_PROFESOR_AHBB = [
 const MENU_CONTROL_ESTUDIOS_AHBB = [
   { icono: 'dashboard', etiqueta: 'Mi Panel', ruta: '/dashboard', encabezado: 'Principal' },
   { icono: 'calendar_month', etiqueta: 'Horarios', ruta: '/horarios' },
+
+  // ─── Control de Estudios (GA) ───
+  { icono: 'warning', etiqueta: 'Nota por Contingencia', ruta: '/control-estudios/contingencia', encabezado: 'Control de Estudios (GA)', separador: true },
+  { icono: 'checklist_rtl', etiqueta: 'Bandeja de Revisión Planes', ruta: '/admin/plan-estudio/bandeja' },
 
   // ─── Operación de Control de Estudios (JC) ───
   { icono: 'grading', etiqueta: 'Carga de Notas y Actas', ruta: '/control-estudios/carga-notas', encabezado: 'Control de Estudios (JC)', separador: true },

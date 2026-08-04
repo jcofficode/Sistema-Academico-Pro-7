@@ -38,14 +38,12 @@ async function limpiarModuloAcademico() {
   await prisma.td_contrato_profesor_ap.deleteMany();
   await prisma.td_pago_ap.deleteMany();
   await prisma.td_tarifa_ap.deleteMany();
-  await prisma.td_indicador_ga.deleteMany();
-  await prisma.td_unidad_ga.deleteMany();
-  await prisma.td_contenido_seccion_ga.deleteMany();
-  await prisma.td_revision_plan_ga.deleteMany();
-  await prisma.td_plan_estudio_ga.deleteMany();
-  await prisma.td_nivel_cualitativo_ga.deleteMany();
-  await prisma.td_seccion_plantilla_ga.deleteMany();
-  await prisma.td_plantilla_plan_ga.deleteMany();
+  await prisma.td_indicadores_logro_ga.deleteMany();
+  await prisma.td_actividades_evaluacion_ga.deleteMany();
+  await prisma.td_detalles_didacticos_ga.deleteMany();
+  await prisma.td_revisiones_plan_ga.deleteMany();
+  await prisma.td_planificaciones_ga.deleteMany();
+  await prisma.td_configuraciones_periodo_ga.deleteMany();
   await prisma.td_acta_jc.deleteMany();
   await prisma.td_calificacion_jc.deleteMany();
   await prisma.td_certificado_sobresaliente_jc.deleteMany();
@@ -301,7 +299,6 @@ async function main() {
         },
       });
 
-      // Solo los dos primeros cortes tienen nota: el docente carga el resto
       for (const item of itemsRegulares.slice(0, 2)) {
         await prisma.td_calificacion_jc.upsert({
           where: {
@@ -324,92 +321,56 @@ async function main() {
     `Inscripciones 2026-II: ${restoAlumnos.length} alumnos en MAT1 y PRG1 con notas de Corte 1 y 2.`,
   );
 
-  // ── Módulo de Plan de Estudio (_ga): Plantilla Institucional y Plan ────
-  console.log('Sembrando Plantilla Institucional y Plan de Estudio de ejemplo (_ga)...');
+  // ── Módulo de Plan de Estudio / Planificación (_ga): Cronograma y Plan ────
+  console.log('Sembrando Configuración Curricular y Planificación de ejemplo (_ga)...');
   
-  // 1. Crear plantilla para 2026-II (Cuantitativa, ponderada a 20pts o %)
-  let plantilla = await prisma.td_plantilla_plan_ga.findFirst({
+  // 1. Crear configuración de período para 2026-II
+  let config_ga = await prisma.td_configuraciones_periodo_ga.findFirst({
     where: { id_periodo_ga: periodoActivo.id_periodo_cjgp }
   });
 
-  if (!plantilla) {
-    plantilla = await prisma.td_plantilla_plan_ga.create({
+  if (!config_ga) {
+    config_ga = await prisma.td_configuraciones_periodo_ga.create({
       data: {
         id_periodo_ga: periodoActivo.id_periodo_cjgp,
-        nombre_ga: 'Formato Estándar 2026-II',
-        tipo_valoracion_ga: 'CUANTITATIVO',
-        escala_min_ga: 0,
-        escala_max_ga: 20,
-        ponderado_ga: true,
-        estado_ga: 'PUBLICADA',
-        secciones_ga: {
-          create: [
-            { nombre_ga: 'Justificación', orden_ga: 1, tipo_contenido_ga: 'TEXTO', obligatoria_ga: true },
-            { nombre_ga: 'Competencias a Desarrollar', orden_ga: 2, tipo_contenido_ga: 'LISTA', obligatoria_ga: true },
-            { nombre_ga: 'Bibliografía', orden_ga: 3, tipo_contenido_ga: 'TEXTO', obligatoria_ga: false },
-          ]
-        }
-      },
-      include: { secciones_ga: true }
+        formato_evaluacion_ga: 'CUANTITATIVO',
+        max_evaluaciones_lapso_ga: 4,
+        lapsos_totales_ga: 2,
+      }
     });
-    console.log('Plantilla de Planificación creada y PUBLICADA para 2026-II.');
+    console.log('Configuración Curricular creada para 2026-II.');
   }
 
-  // 2. Crear un plan de estudio ENTREGADO para MAT1
+  // 2. Crear una planificación ENTREGADA para MAT1
   const materiaMat1 = await prisma.td_materia_cjgp.findFirst({ where: { codigo_cjgp: 'MAT1' } });
   if (materiaMat1 && materiaMat1.id_profesor_materia_cjgp) {
-    const existePlan = await prisma.td_plan_estudio_ga.findFirst({
+    const existePlan = await prisma.td_planificaciones_ga.findFirst({
       where: { id_materia_ga: materiaMat1.id_materia_cjgp, id_periodo_ga: periodoActivo.id_periodo_cjgp }
     });
 
     if (!existePlan) {
-      const planMateria = await prisma.td_plan_estudio_ga.create({
+      const planMateria = await prisma.td_planificaciones_ga.create({
         data: {
           id_materia_ga: materiaMat1.id_materia_cjgp,
           id_periodo_ga: periodoActivo.id_periodo_cjgp,
           id_profesor_ga: materiaMat1.id_profesor_materia_cjgp,
-          id_plantilla_ga: plantilla.id_plantilla_ga,
+          programaUrl_ga: '/uploads/programas/programa-oficial-matematica1.pdf',
+          formato_evaluacion_ga: 'CUANTITATIVO',
           estado_ga: 'ENTREGADO',
-          contenidos_ga: {
-            create: plantilla.secciones_ga.map(sec => ({
-              id_seccion_contenido_ga: sec.id_seccion_ga,
-              texto_ga: sec.tipo_contenido_ga === 'LISTA' ? '1. Razonamiento lógico\n2. Cálculo básico' : 'Esta materia provee las bases matemáticas fundamentales.',
-            }))
-          },
-        }
-      });
-
-      // Crear Unidades y vinculación con Corte 1 y Corte 2 (del plan de evaluación)
-      const cortes = itemsRegulares.slice(0, 2);
-      
-      await prisma.td_unidad_ga.create({
-        data: {
-          id_plan_unidad_ga: planMateria.id_plan_estudio_ga,
-          nombre_ga: 'Unidad I: Conjuntos y Funciones',
-          orden_ga: 1,
-          fecha_inicio_ga: new Date('2026-07-13'),
-          fecha_fin_ga: new Date('2026-08-15'),
-          id_item_evaluacion_ga: cortes.length > 0 ? cortes[0].id_item_jc : null,
-          indicadores_ga: {
+          codigo_ga: `PLAN-MAT${materiaMat1.id_materia_cjgp}-PER${periodoActivo.id_periodo_cjgp}`,
+          hashVerificacion_ga: 'a1b2c3d4e5f67890123456789012345678901234567890123456789012345678',
+          detallesDidacticos_ga: {
             create: [
-              { descripcion_ga: 'Identifica tipos de conjuntos', orden_ga: 1, valor_ga: 10 },
-              { descripcion_ga: 'Resuelve operaciones con funciones', orden_ga: 2, valor_ga: 10 }
+              { lapso_ga: 1, unidad_tematica_ga: 'Unidad I: Conjuntos y Funciones', estrategia_ga: 'Clases teóricas y resolución de guías', recursos_ga: 'Proyector y Guía PDF', orden_ga: 1 },
+              { lapso_ga: 2, unidad_tematica_ga: 'Unidad II: Límites y Continuidad', estrategia_ga: 'Talleres en grupo y laboratorios', recursos_ga: 'Pizarrón interactivo', orden_ga: 1 }
             ]
-          }
-        }
-      });
-
-      await prisma.td_unidad_ga.create({
-        data: {
-          id_plan_unidad_ga: planMateria.id_plan_estudio_ga,
-          nombre_ga: 'Unidad II: Límites y Continuidad',
-          orden_ga: 2,
-          fecha_inicio_ga: new Date('2026-08-16'),
-          fecha_fin_ga: new Date('2026-09-30'),
-          id_item_evaluacion_ga: cortes.length > 1 ? cortes[1].id_item_jc : null,
-          indicadores_ga: {
+          },
+          actividadesEvaluacion_ga: {
             create: [
-              { descripcion_ga: 'Calcula límites laterales', orden_ga: 1, valor_ga: 20 }
+              { lapso_ga: 1, nombre_actividad_ga: 'Examen Parcial I', tipo_evaluacion_ga: 'EXAMEN', porcentaje_ga: 50, fecha_evaluacion_ga: new Date('2026-08-15'), orden_ga: 1 },
+              { lapso_ga: 1, nombre_actividad_ga: 'Taller de Funciones', tipo_evaluacion_ga: 'TALLER', porcentaje_ga: 50, fecha_evaluacion_ga: new Date('2026-08-30'), orden_ga: 2 },
+              { lapso_ga: 2, nombre_actividad_ga: 'Examen Parcial II', tipo_evaluacion_ga: 'EXAMEN', porcentaje_ga: 50, fecha_evaluacion_ga: new Date('2026-09-15'), orden_ga: 1 },
+              { lapso_ga: 2, nombre_actividad_ga: 'Proyecto de Cálculo', tipo_evaluacion_ga: 'PROYECTO', porcentaje_ga: 50, fecha_evaluacion_ga: new Date('2026-09-30'), orden_ga: 2 }
             ]
           }
         }
@@ -421,24 +382,21 @@ async function main() {
   // 3. Crear un plan de estudio en BORRADOR para PRG1
   const materiaPrg1 = await prisma.td_materia_cjgp.findFirst({ where: { codigo_cjgp: 'PRG1' } });
   if (materiaPrg1 && materiaPrg1.id_profesor_materia_cjgp) {
-    const existePlanPrg1 = await prisma.td_plan_estudio_ga.findFirst({
+    const existePlanPrg1 = await prisma.td_planificaciones_ga.findFirst({
       where: { id_materia_ga: materiaPrg1.id_materia_cjgp, id_periodo_ga: periodoActivo.id_periodo_cjgp }
     });
 
     if (!existePlanPrg1) {
-      await prisma.td_plan_estudio_ga.create({
+      await prisma.td_planificaciones_ga.create({
         data: {
           id_materia_ga: materiaPrg1.id_materia_cjgp,
           id_periodo_ga: periodoActivo.id_periodo_cjgp,
           id_profesor_ga: materiaPrg1.id_profesor_materia_cjgp,
-          id_plantilla_ga: plantilla.id_plantilla_ga,
+          programaUrl_ga: '/uploads/programas/programa-oficial-programacion1.pdf',
+          formato_evaluacion_ga: 'CUANTITATIVO',
           estado_ga: 'BORRADOR',
-          contenidos_ga: {
-            create: plantilla.secciones_ga.map(sec => ({
-              id_seccion_contenido_ga: sec.id_seccion_ga,
-              texto_ga: sec.tipo_contenido_ga === 'LISTA' ? '1. Lógica\n2. Algoritmos' : 'Fundamentos de programación.',
-            }))
-          },
+          codigo_ga: `PLAN-MAT${materiaPrg1.id_materia_cjgp}-PER${periodoActivo.id_periodo_cjgp}`,
+          hashVerificacion_ga: 'b2c3d4e5f67890123456789012345678901234567890123456789012345678a1',
         }
       });
       console.log('Plan de estudio para PRG1 creado en BORRADOR.');

@@ -1,162 +1,240 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Param,
   ParseIntPipe,
-  Patch,
   Post,
-  Put,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import type { RequestConUsuario_ahbb } from '../common/interfaces/request-usuario.interface_ahbb';
-import { PlanesEstudioService_ga } from './planes-estudio.service_ga';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { RolesDecorator_ahbb } from '../common/decorators/roles.decorator_ahbb';
 import { JwtAuthGuard_ahbb } from '../common/guards/jwt-auth.guard_ahbb';
 import { RolesGuard_ahbb } from '../common/guards/roles.guard_ahbb';
-import { RolesDecorator_ahbb } from '../common/decorators/roles.decorator_ahbb';
-import { CrearPlanEstudioDto_ga } from './dto/crear-plan-estudio.dto_ga';
-import { RevisarPlanDto_ga } from './dto/revisar-plan.dto_ga';
+import { RegistrarNotaContingenciaDto_ga } from './dto/contingencia-nota.dto_ga';
+import { CrearPlanificacionDto_ga } from './dto/crear-planificacion.dto_ga';
+import { PlanesEstudioService_ga } from './planes-estudio.service_ga';
 
 /**
- * Endpoints del Plan de Estudio (Épica B y C).
- * Profesor: elabora y entrega. Admin: revisa y aprueba. Alumno: consulta.
+ * Configuración de almacenamiento Multer para los archivos del programa oficial
  */
-@Controller('plan-estudio')
+const configuracionAlmacenamientoMulter_ga = {
+  storage: diskStorage({
+    destination: './uploads/programas',
+    filename: (req, file, callback) => {
+      const sufijoUnico_ga = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const extension_ga = extname(file.originalname).toLowerCase();
+      callback(null, `programa-${sufijoUnico_ga}${extension_ga}`);
+    },
+  }),
+  fileFilter: (req: any, file: any, callback: any) => {
+    const extensionesPermitidas_ga = ['.pdf', '.docx'];
+    const ext_ga = extname(file.originalname).toLowerCase();
+    if (!extensionesPermitidas_ga.includes(ext_ga)) {
+      return callback(
+        new BadRequestException('Solo se permiten archivos en formato PDF o Word (.pdf, .docx)'),
+        false,
+      );
+    }
+    callback(null, true);
+  },
+};
+
+/**
+ * Controlador REST para el Módulo de Planificación Curricular (_ga)
+ */
+@Controller('planes-estudio_ga')
+@UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
 export class PlanesEstudioController_ga {
-  constructor(
-    private readonly planesService_ga: PlanesEstudioService_ga,
-  ) {}
+  constructor(private readonly planesEstudioService_ga: PlanesEstudioService_ga) {}
 
-  // ─── Profesor ───────────────────────────────────────────────
+  /**
+   * Carga del Archivo Oficial del Programa de Estudio (PDF / DOCX)
+   */
+  @Post('upload-programa')
+  @RolesDecorator_ahbb('PROFESOR', 'ADMIN')
+  @UseInterceptors(FileInterceptor('programa_ga', configuracionAlmacenamientoMulter_ga))
+  async subirProgramaOficial_ga(@UploadedFile() file_ga: Express.Multer.File) {
+    console.log('[PlanesEstudioController_ga] Petición recibida para subida de programa oficial');
+    if (!file_ga) {
+      throw new BadRequestException('Debe adjuntar un archivo de programa oficial (.pdf o .docx)');
+    }
 
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('PROFESOR')
-  @Get('mis-planes/:idPeriodo')
-  async obtenerMisPlanes_ga(
-    @Req() request_ga: RequestConUsuario_ahbb,
+    // Ruta relativa accesible vía /uploads/programas/<filename>
+    const urlRelativa_ga = `/uploads/programas/${file_ga.filename}`;
+    console.log(`[PlanesEstudioController_ga] Archivo subido con éxito: ${urlRelativa_ga}`);
+
+    return {
+      exito_ga: true,
+      mensaje_ga: 'Programa oficial subido y almacenado correctamente',
+      programaUrl_ga: urlRelativa_ga,
+      nombreOriginal_ga: file_ga.originalname,
+    };
+  }
+
+  /**
+   * Guardado Integral de la Planificación Docente en Bloque
+   */
+  @Post('guardar-completo')
+  @RolesDecorator_ahbb('PROFESOR', 'ADMIN')
+  async guardarPlanificacionCompleta_ga(
+    @Req() req_ga: any,
+    @Body() dto_ga: CrearPlanificacionDto_ga,
+  ) {
+    console.log('[PlanesEstudioController_ga] Petición recibida para guardar planificación completa');
+    // El JWT guard registra el payload en request.usuario_ahbb (no en request.user)
+    const idProfesor_ga = req_ga.usuario_ahbb?.id_usuario_ahbb || req_ga.usuario_ahbb?.sub;
+    console.log(`[PlanesEstudioController_ga] Profesor ID extraído del JWT: ${idProfesor_ga}`);
+
+    const planificacion_ga = await this.planesEstudioService_ga.guardarPlanificacionCompleta_ga(
+      idProfesor_ga,
+      dto_ga,
+    );
+
+    return {
+      exito_ga: true,
+      mensaje_ga: 'Planificación docente guardada exitosamente en bloque',
+      datos_ga: planificacion_ga,
+    };
+  }
+
+  /**
+   * Obtiene la planificación completa de una materia y período
+   */
+  @Get('materia/:idMateria/periodo/:idPeriodo')
+  @RolesDecorator_ahbb('PROFESOR', 'ADMIN', 'CONTROL_ESTUDIOS', 'ALUMNO')
+  async obtenerPlanificacion_ga(
+    @Param('idMateria', ParseIntPipe) idMateria_ga: number,
     @Param('idPeriodo', ParseIntPipe) idPeriodo_ga: number,
   ) {
-    return this.planesService_ga.obtenerMisPlanes_ga(
-      Number(request_ga.usuario_ahbb?.sub),
-      idPeriodo_ga,
-    );
+    console.log(`[PlanesEstudioController_ga] Consultando planificación para materia ${idMateria_ga} y período ${idPeriodo_ga}`);
+    try {
+      const planificacion_ga = await this.planesEstudioService_ga.obtenerPlanificacionPorMateriaPeriodo_ga(
+        idMateria_ga,
+        idPeriodo_ga,
+      );
+      return { exito_ga: true, datos_ga: planificacion_ga };
+    } catch {
+      // Si no existe planificación, devolver null en lugar de 404 para modo Editar vs Crear
+      return { exito_ga: false, datos_ga: null };
+    }
   }
 
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('PROFESOR')
-  @Post()
-  async crear_ga(
-    @Body() datos_ga: CrearPlanEstudioDto_ga,
-    @Req() request_ga: RequestConUsuario_ahbb,
+  /**
+   * Endpoint Exclusivo de Contingencia para el Rol Jefe de Control de Estudio
+   */
+  @Post('contingencia-nota')
+  @RolesDecorator_ahbb('CONTROL_ESTUDIOS')
+  async registrarNotaContingencia_ga(
+    @Req() req_ga: any,
+    @Body() dto_ga: RegistrarNotaContingenciaDto_ga,
   ) {
-    return this.planesService_ga.crear_ga(
-      datos_ga,
-      Number(request_ga.usuario_ahbb?.sub),
+    console.log('[PlanesEstudioController_ga] Acceso al endpoint de contingencia por Control de Estudios');
+    const idUsuarioControl_ga = req_ga.usuario_ahbb?.id_usuario_ahbb || req_ga.usuario_ahbb?.sub;
+
+    const resultado_ga = await this.planesEstudioService_ga.registrarNotaContingencia_ga(
+      idUsuarioControl_ga,
+      dto_ga,
     );
+
+    return {
+      exito_ga: true,
+      mensaje_ga: 'Nota por contingencia registrada exitosamente por Control de Estudios',
+      datos_ga: resultado_ga,
+    };
   }
 
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('PROFESOR')
-  @Put(':id')
-  async actualizar_ga(
-    @Param('id', ParseIntPipe) id_ga: number,
-    @Body() datos_ga: CrearPlanEstudioDto_ga,
-    @Req() request_ga: RequestConUsuario_ahbb,
+  /**
+   * Obtiene la bandeja de revisión de planes para un período (Admin / Control de Estudios)
+   */
+  @Get('bandeja/periodo/:idPeriodo')
+  @RolesDecorator_ahbb('ADMIN', 'CONTROL_ESTUDIOS')
+  async obtenerBandejaRevision_ga(@Param('idPeriodo', ParseIntPipe) idPeriodo_ga: number) {
+    console.log(`[PlanesEstudioController_ga] Consultando bandeja de revisión para período ${idPeriodo_ga}`);
+    return this.planesEstudioService_ga.obtenerBandejaRevision_ga(idPeriodo_ga);
+  }
+
+  /**
+   * Aprueba o devuelve un plan de estudio entregado por un profesor
+   */
+  @Post('revisar/:idPlanificacion')
+  @RolesDecorator_ahbb('ADMIN', 'CONTROL_ESTUDIOS')
+  async revisarPlan_ga(
+    @Req() req_ga: any,
+    @Param('idPlanificacion', ParseIntPipe) idPlanificacion_ga: number,
+    @Body('accion_ga') accion_ga: 'APROBADO' | 'DEVUELTO',
+    @Body('observacion_ga') observacion_ga?: string,
   ) {
-    return this.planesService_ga.actualizar_ga(
-      id_ga,
-      datos_ga,
-      Number(request_ga.usuario_ahbb?.sub),
+    console.log(`[PlanesEstudioController_ga] Revisando plan ${idPlanificacion_ga} → Acción: ${accion_ga}`);
+    const idRevisor_ga = req_ga.usuario_ahbb?.id_usuario_ahbb || req_ga.usuario_ahbb?.sub || 1;
+
+    const planActualizado_ga = await this.planesEstudioService_ga.revisarPlan_ga(
+      idPlanificacion_ga,
+      idRevisor_ga,
+      accion_ga,
+      observacion_ga,
     );
+
+    return {
+      exito: true,
+      mensaje: `Planificación ${accion_ga === 'APROBADO' ? 'aprobada' : 'devuelta con observaciones'} exitosamente.`,
+      planificacion_ga: planActualizado_ga,
+    };
   }
 
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('PROFESOR')
-  @Patch(':id/entregar')
-  async entregar_ga(
-    @Param('id', ParseIntPipe) id_ga: number,
-    @Req() request_ga: RequestConUsuario_ahbb,
-  ) {
-    return this.planesService_ga.entregar_ga(
-      id_ga,
-      Number(request_ga.usuario_ahbb?.sub),
-    );
+  /**
+   * Descarga la Plantilla Excel (.xlsx) Oficial para el Cronograma de Evaluación
+   */
+  @Get('plantilla-excel')
+  @RolesDecorator_ahbb('PROFESOR', 'ADMIN')
+  descargarPlantillaExcel_ga(@Res() res_ga: Response) {
+    console.log('[PlanesEstudioController_ga] Petición para descargar plantilla Excel');
+    const buffer_ga = this.planesEstudioService_ga.generarPlantillaExcel_ga();
+
+    res_ga.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res_ga.setHeader('Content-Disposition', 'attachment; filename=Plantilla_Cronograma_UNE_ga.xlsx');
+    return res_ga.send(buffer_ga);
   }
 
-  // ─── Admin (coordinación) ───────────────────────────────────
+  /**
+   * Importa y procesa un archivo Excel (.xlsx) con el cronograma de evaluación
+   */
+  @Post('importar-excel')
+  @RolesDecorator_ahbb('PROFESOR', 'ADMIN')
+  @UseInterceptors(FileInterceptor('excel_ga'))
+  async importarCronogramaExcel_ga(@UploadedFile() file_ga: Express.Multer.File) {
+    console.log('[PlanesEstudioController_ga] Petición para importar cronograma desde Excel');
+    if (!file_ga || !file_ga.buffer) {
+      throw new BadRequestException('Debe adjuntar un archivo Excel (.xlsx) válido.');
+    }
 
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
-  @Get('bandeja/:idPeriodo')
-  async obtenerBandeja_ga(
+    return this.planesEstudioService_ga.importarCronogramaExcel_ga(file_ga.buffer);
+  }
+
+  /**
+   * Exporta la planificación activa de una materia a formato Excel (.xlsx)
+   */
+  @Get('exportar-excel/materia/:idMateria/periodo/:idPeriodo')
+  @RolesDecorator_ahbb('PROFESOR', 'ADMIN', 'CONTROL_ESTUDIOS', 'ALUMNO')
+  async exportarPlanExcel_ga(
+    @Param('idMateria', ParseIntPipe) idMateria_ga: number,
     @Param('idPeriodo', ParseIntPipe) idPeriodo_ga: number,
-  ) {
-    return this.planesService_ga.obtenerBandeja_ga(idPeriodo_ga);
-  }
-
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
-  @Patch(':id/revisar')
-  async revisar_ga(
-    @Param('id', ParseIntPipe) id_ga: number,
-    @Body() datos_ga: RevisarPlanDto_ga,
-    @Req() request_ga: RequestConUsuario_ahbb,
-  ) {
-    return this.planesService_ga.revisar_ga(
-      id_ga,
-      datos_ga,
-      Number(request_ga.usuario_ahbb?.sub),
-    );
-  }
-
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN')
-  @Get('reporte-cumplimiento/:idPeriodo')
-  async reporteCumplimiento_ga(
-    @Param('idPeriodo', ParseIntPipe) idPeriodo_ga: number,
-  ) {
-    return this.planesService_ga.reporteCumplimiento_ga(idPeriodo_ga);
-  }
-
-  // ─── Alumno ─────────────────────────────────────────────────
-
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ALUMNO')
-  @Get('alumno/mis-planes/:idPeriodo')
-  async obtenerPlanesAlumno_ga(
-    @Req() request_ga: RequestConUsuario_ahbb,
-    @Param('idPeriodo', ParseIntPipe) idPeriodo_ga: number,
-  ) {
-    return this.planesService_ga.obtenerPlanesAlumno_ga(
-      Number(request_ga.usuario_ahbb?.sub),
-      idPeriodo_ga,
-    );
-  }
-
-  // ─── Detalle y PDF (compartido) ─────────────────────────────
-
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR', 'ALUMNO')
-  @Get(':id')
-  async obtenerPorId_ga(@Param('id', ParseIntPipe) id_ga: number) {
-    return this.planesService_ga.obtenerPorId_ga(id_ga);
-  }
-
-  @UseGuards(JwtAuthGuard_ahbb, RolesGuard_ahbb)
-  @RolesDecorator_ahbb('ADMIN', 'PROFESOR')
-  @Get(':id/pdf')
-  async descargarPdf_ga(
-    @Param('id', ParseIntPipe) id_ga: number,
     @Res() res_ga: Response,
   ) {
-    const buffer_ga = await this.planesService_ga.generarPdf_ga(id_ga);
-    res_ga.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="plan-estudio-${id_ga}.pdf"`,
-    });
-    res_ga.end(buffer_ga);
+    console.log(`[PlanesEstudioController_ga] Petición para exportar plan a Excel: materia ${idMateria_ga}, período ${idPeriodo_ga}`);
+    const buffer_ga = await this.planesEstudioService_ga.exportarPlanExcel_ga(idMateria_ga, idPeriodo_ga);
+
+    res_ga.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res_ga.setHeader('Content-Disposition', `attachment; filename=Cronograma_Materia_${idMateria_ga}_Periodo_${idPeriodo_ga}.xlsx`);
+    return res_ga.send(buffer_ga);
   }
 }
+

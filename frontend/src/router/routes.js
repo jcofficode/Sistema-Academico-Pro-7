@@ -263,6 +263,13 @@ const routes = [
     meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
   },
   {
+    // Vista nueva: Configuración Curricular Global del Período (reemplaza plantillas antiguas)
+    path: '/admin/plan-estudio/configuracion-curricular',
+    name: 'adminConfiguracionCurricular_ga',
+    component: () => import('pages/admin/ConfiguracionCurricularView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [ADMIN] },
+  },
+  {
     path: '/admin/plan-estudio/bandeja',
     name: 'adminBandejaRevisionPlan_ga',
     component: () => import('pages/admin/BandejaRevisionView_ga.vue'),
@@ -271,8 +278,14 @@ const routes = [
   {
     path: '/profesor/plan-estudio',
     name: 'profesorElaborarPlan_ga',
-    component: () => import('pages/profesor/ElaborarPlanView_ga.vue'),
-    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF] },
+    component: () => import('pages/profesor/ElaborarPlanificacionCronogramaView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [PROF, ADMIN] },
+  },
+  {
+    path: '/control-estudios/contingencia',
+    name: 'contingenciaNotas_ga',
+    component: () => import('pages/control-estudios/ContingenciaNotasView_ga.vue'),
+    meta: { publica_ahbb: false, layout_ahbb: 'sistema', rolesPermitidos_ahbb: [CTRL] },
   },
   {
     path: '/alumno/planes-estudio',
