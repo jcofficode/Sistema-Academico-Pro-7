@@ -6,176 +6,102 @@
       </h4>
     </div>
 
-    <!-- Pestañas -->
-    <q-tabs
-      v-model="tab_ga"
-      dense
-      class="text-grey"
-      active-color="primary"
-      indicator-color="primary"
-      align="left"
-      narrow-indicator
+    <q-card flat bordered class="q-pa-md q-mb-md">
+      <div class="row q-col-gutter-md">
+        <div class="col-12 col-md-4">
+          <q-select
+            v-model="filtro_ga.id_periodo_ga"
+            :options="periodos_ga"
+            option-value="id_periodo_cjgp"
+            option-label="nombre_cjgp"
+            label="Período Académico"
+            outlined
+            dense
+            emit-value
+            map-options
+            @update:model-value="cargarBandeja_ga"
+          />
+        </div>
+        <div class="col-12 col-md-4">
+          <q-select
+            v-model="filtro_ga.estado_ga"
+            :options="['TODOS', 'ENTREGADO', 'APROBADO', 'DEVUELTO', 'BORRADOR']"
+            label="Estado"
+            outlined
+            dense
+          />
+        </div>
+      </div>
+    </q-card>
+
+    <q-table
+      :rows="planesFiltrados_ga"
+      :columns="columnas_ga"
+      row-key="id_plan_estudio_ga"
+      :loading="cargando_ga"
+      flat
+      bordered
     >
-      <q-tab name="bandeja" label="Bandeja de Revisión" icon="inbox" />
-      <q-tab name="reporte" label="Reporte de Cumplimiento" icon="bar_chart" />
-    </q-tabs>
+      <template v-slot:body-cell-profesor="props">
+        <q-td :props="props">
+          {{ props.row.profesor_ga.nombre_ahbb }} {{ props.row.profesor_ga.apellido_ahbb }}
+          <div class="text-caption text-grey">C.I: {{ props.row.profesor_ga.cedula_ahbb }}</div>
+        </q-td>
+      </template>
 
-    <q-separator />
+      <template v-slot:body-cell-materia="props">
+        <q-td :props="props">
+          <div class="text-weight-bold">{{ props.row.materia_ga.codigo_cjgp }}</div>
+          <div>{{ props.row.materia_ga.nombre_cjgp }}</div>
+        </q-td>
+      </template>
 
-    <q-tab-panels v-model="tab_ga" animated>
-      <!-- TAB: Bandeja -->
-      <q-tab-panel name="bandeja" class="q-pa-none q-pt-md">
-        <q-card flat bordered class="q-pa-md q-mb-md">
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-md-4">
-              <q-select
-                v-model="filtro_ga.id_periodo_ga"
-                :options="periodos_ga"
-                option-value="id_periodo_cjgp"
-                option-label="nombre_cjgp"
-                label="Período Académico"
-                outlined
-                dense
-                emit-value
-                map-options
-                @update:model-value="cargarBandeja_ga"
-              />
-            </div>
-            <div class="col-12 col-md-4">
-              <q-select
-                v-model="filtro_ga.estado_ga"
-                :options="['TODOS', 'ENTREGADO', 'APROBADO', 'DEVUELTO', 'BORRADOR']"
-                label="Estado"
-                outlined
-                dense
-              />
-            </div>
-          </div>
-        </q-card>
+      <template v-slot:body-cell-estado="props">
+        <q-td :props="props">
+          <q-chip
+            :color="colorEstado_ga(props.row.estado_ga)"
+            text-color="white"
+            size="sm"
+            class="text-weight-bold"
+          >
+            {{ props.row.estado_ga }}
+          </q-chip>
+        </q-td>
+      </template>
 
-        <q-table
-          :rows="planesFiltrados_ga"
-          :columns="columnas_ga"
-          row-key="id_plan_estudio_ga"
-          :loading="cargando_ga"
-          flat
-          bordered
-        >
-          <template v-slot:body-cell-profesor="props">
-            <q-td :props="props">
-              {{ props.row.profesor_ga.nombre_ahbb }} {{ props.row.profesor_ga.apellido_ahbb }}
-              <div class="text-caption text-grey">C.I: {{ props.row.profesor_ga.cedula_ahbb }}</div>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-materia="props">
-            <q-td :props="props">
-              <div class="text-weight-bold">{{ props.row.materia_ga.codigo_cjgp }}</div>
-              <div>{{ props.row.materia_ga.nombre_cjgp }}</div>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-estado="props">
-            <q-td :props="props">
-              <q-chip
-                :color="colorEstado_ga(props.row.estado_ga)"
-                text-color="white"
-                size="sm"
-                class="text-weight-bold"
-              >
-                {{ props.row.estado_ga }}
-              </q-chip>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-acciones="props">
-            <q-td :props="props" class="text-right">
-              <q-btn
-                v-if="props.row.estado_ga === 'ENTREGADO'"
-                color="secondary"
-                icon="fact_check"
-                label="Revisar"
-                size="sm"
-                unelevated
-                @click="abrirRevision_ga(props.row)"
-              />
-              <q-btn
-                v-else
-                color="info"
-                icon="visibility"
-                label="Ver"
-                size="sm"
-                flat
-                @click="abrirRevision_ga(props.row)"
-              />
-              <q-btn
-                v-if="props.row.estado_ga === 'APROBADO'"
-                color="primary"
-                icon="print"
-                size="sm"
-                flat
-                round
-                class="q-ml-sm"
-                @click="descargarPdf_ga(props.row.id_plan_estudio_ga)"
-              />
-            </q-td>
-          </template>
-        </q-table>
-      </q-tab-panel>
-
-      <!-- TAB: Reporte -->
-      <q-tab-panel name="reporte" class="q-pa-none q-pt-md">
-        <q-card flat bordered class="q-pa-md q-mb-md">
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-md-4">
-              <q-select
-                v-model="filtro_ga.id_periodo_reporte_ga"
-                :options="periodos_ga"
-                option-value="id_periodo_cjgp"
-                option-label="nombre_cjgp"
-                label="Período Académico"
-                outlined
-                dense
-                emit-value
-                map-options
-                @update:model-value="cargarReporte_ga"
-              />
-            </div>
-            <div class="col-12 col-md-4 flex items-center">
-              <q-btn icon="refresh" round flat color="primary" @click="cargarReporte_ga" :loading="cargandoReporte_ga" />
-            </div>
-          </div>
-        </q-card>
-
-        <q-table
-          :rows="reporteData_ga"
-          :columns="columnasReporte_ga"
-          row-key="id_carrera"
-          :loading="cargandoReporte_ga"
-          flat
-          bordered
-          hide-bottom
-          :pagination="{ rowsPerPage: 0 }"
-        >
-          <template v-slot:body-cell-progreso="props">
-            <q-td :props="props">
-              <div class="row items-center">
-                <q-linear-progress
-                  :value="props.row.porcentaje_aprobados / 100"
-                  color="positive"
-                  class="col q-mr-sm"
-                  size="10px"
-                  rounded
-                />
-                <div class="text-caption text-weight-bold" style="width: 40px;">
-                  {{ props.row.porcentaje_aprobados }}%
-                </div>
-              </div>
-            </q-td>
-          </template>
-        </q-table>
-      </q-tab-panel>
-    </q-tab-panels>
+      <template v-slot:body-cell-acciones="props">
+        <q-td :props="props" class="text-right">
+          <q-btn
+            v-if="props.row.estado_ga === 'ENTREGADO'"
+            color="secondary"
+            icon="fact_check"
+            label="Revisar"
+            size="sm"
+            unelevated
+            @click="abrirRevision_ga(props.row)"
+          />
+          <q-btn
+            v-else
+            color="info"
+            icon="visibility"
+            label="Ver"
+            size="sm"
+            flat
+            @click="abrirRevision_ga(props.row)"
+          />
+          <q-btn
+            v-if="props.row.estado_ga === 'APROBADO'"
+            color="primary"
+            icon="print"
+            size="sm"
+            flat
+            round
+            class="q-ml-sm"
+            @click="descargarPdf_ga(props.row.id_plan_estudio_ga)"
+          />
+        </q-td>
+      </template>
+    </q-table>
 
     <!-- Modal Revisión (Solo lectura + acciones) -->
     <q-dialog v-model="dialogo_ga" maximized transition-show="slide-up" transition-hide="slide-down">
@@ -327,26 +253,21 @@ import { obtenerPeriodos_cjgp } from '../../servicios/academicoServicio_cjgp';
 import {
   obtenerBandejaRevision_ga,
   revisarPlan_ga,
-  obtenerReporteCumplimiento_ga,
   descargarPlanPdf_ga
 } from '../../servicios/planEstudioServicio_ga';
 
 const $q = useQuasar();
 
-const tab_ga = ref('bandeja');
 const periodos_ga = ref([]);
 const planesBandeja_ga = ref([]);
-const reporteData_ga = ref([]);
 
 const cargando_ga = ref(false);
-const cargandoReporte_ga = ref(false);
 const guardando_ga = ref(false);
 const dialogo_ga = ref(false);
 const planEnRevision_ga = ref(null);
 
 const filtro_ga = ref({
   id_periodo_ga: null,
-  id_periodo_reporte_ga: null,
   estado_ga: 'ENTREGADO',
 });
 
@@ -361,16 +282,6 @@ const columnas_ga = [
   { name: 'fecha', label: 'Actualizado', field: row => new Date(row.actualizadoEn_ga).toLocaleDateString(), align: 'center', sortable: true },
   { name: 'estado', label: 'Estado', field: 'estado_ga', align: 'center', sortable: true },
   { name: 'acciones', label: 'Acciones', align: 'right' },
-];
-
-const columnasReporte_ga = [
-  { name: 'carrera', label: 'Carrera', field: 'carrera', align: 'left', sortable: true },
-  { name: 'total_materias', label: 'Materias Asignadas', field: 'total_materias', align: 'center' },
-  { name: 'aprobados', label: 'Planes Aprobados', field: 'aprobados', align: 'center' },
-  { name: 'entregados', label: 'En Revisión', field: 'entregados', align: 'center' },
-  { name: 'devueltos', label: 'Devueltos', field: 'devueltos', align: 'center' },
-  { name: 'sin_plan', label: 'Sin Entregar / Borrador', field: 'sin_plan', align: 'center' },
-  { name: 'progreso', label: '% Aprobación', field: 'porcentaje_aprobados', align: 'left', sortable: true },
 ];
 
 const planesFiltrados_ga = computed(() => {
@@ -395,9 +306,7 @@ const cargarInicial_ga = async () => {
     const activo = periodos_ga.value.find(p => p.activo_cjgp || p.estado_cjgp === 'ACTIVO') || periodos_ga.value[0];
     if (activo) {
       filtro_ga.value.id_periodo_ga = activo.id_periodo_cjgp;
-      filtro_ga.value.id_periodo_reporte_ga = activo.id_periodo_cjgp;
       await cargarBandeja_ga();
-      await cargarReporte_ga();
     }
   } catch {
     $q.notify({ type: 'negative', message: 'Error cargando períodos.' });
@@ -413,19 +322,6 @@ const cargarBandeja_ga = async () => {
     console.error(error);
   } finally {
     cargando_ga.value = false;
-  }
-};
-
-const cargarReporte_ga = async () => {
-  if (!filtro_ga.value.id_periodo_reporte_ga) return;
-  cargandoReporte_ga.value = true;
-  try {
-    const res = await obtenerReporteCumplimiento_ga(filtro_ga.value.id_periodo_reporte_ga);
-    reporteData_ga.value = res.filas;
-  } catch (error) {
-    console.error(error);
-  } finally {
-    cargandoReporte_ga.value = false;
   }
 };
 
@@ -455,7 +351,6 @@ const revisar_ga = async (accion) => {
     $q.notify({ type: 'positive', message: res.mensaje });
     dialogo_ga.value = false;
     await cargarBandeja_ga();
-    await cargarReporte_ga(); // Actualiza progreso
   } else {
     $q.notify({ type: 'negative', message: res.mensaje });
   }

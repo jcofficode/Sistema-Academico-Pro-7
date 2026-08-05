@@ -24,20 +24,18 @@ export class ActualizarConfiguracionDto_ga {
   formato_evaluacion_ga: 'CUANTITATIVO' | 'CUALITATIVO';
 
   /**
-   * Lapsos totales — FIJO en 2 por requerimiento del PO.
-   * Se acepta en el payload pero siempre se guarda como 2.
+   * Lapsos totales del período (Configurable: 1 a 6 lapsos).
    */
   @IsInt()
-  @Min(2, { message: 'El mínimo de lapsos es 2.' })
-  @Max(2, { message: 'El máximo de lapsos es 2 (inamovible por PO).' })
-  lapsos_totales_ga: 2;
+  @Min(1, { message: 'El número mínimo de lapsos es 1.' })
+  @Max(6, { message: 'El número máximo de lapsos es 6.' })
+  lapsos_totales_ga: number;
 
   /**
-   * Máximo de evaluaciones por lapso — FIJO en 4 por requerimiento del PO.
-   * Se acepta en el payload pero siempre se guarda como 4.
+   * Máximo de evaluaciones por lapso (Configurable: 1 a 10 actividades).
    */
   @IsInt()
-  @Min(1)
-  @Max(4, { message: 'El máximo de evaluaciones por lapso es 4 (inamovible por PO).' })
+  @Min(1, { message: 'El número mínimo de evaluaciones por lapso es 1.' })
+  @Max(10, { message: 'El número máximo de evaluaciones por lapso es 10.' })
   max_evaluaciones_lapso_ga: number;
 }

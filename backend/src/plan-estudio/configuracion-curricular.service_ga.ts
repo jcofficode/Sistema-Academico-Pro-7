@@ -150,21 +150,23 @@ export class ConfiguracionCurricularService_ga {
       );
     }
 
-    // INAMOVIBLE PO: lapsos=2, max_evaluaciones=4 siempre, sin importar el DTO
+    // Guardar parámetros configurables del período
+    const lapsos = dto_ga.lapsos_totales_ga || 2;
+    const maxEval = dto_ga.max_evaluaciones_lapso_ga || 4;
+
     const configGuardada_ga = await this.prisma_ga.td_configuraciones_periodo_ga.upsert({
       where: { id_periodo_ga: idPeriodo_ga },
       update: {
         formato_evaluacion_ga: dto_ga.formato_evaluacion_ga,
-        // Los campos inamovibles no se tocan desde el DTO
-        lapsos_totales_ga: 2,
-        max_evaluaciones_lapso_ga: 4,
+        lapsos_totales_ga: lapsos,
+        max_evaluaciones_lapso_ga: maxEval,
         actualizadoEn_ga: new Date(),
       },
       create: {
         id_periodo_ga: idPeriodo_ga,
         formato_evaluacion_ga: dto_ga.formato_evaluacion_ga,
-        lapsos_totales_ga: 2,
-        max_evaluaciones_lapso_ga: 4,
+        lapsos_totales_ga: lapsos,
+        max_evaluaciones_lapso_ga: maxEval,
       },
     });
 

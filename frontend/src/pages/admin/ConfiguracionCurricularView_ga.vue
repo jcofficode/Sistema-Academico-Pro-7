@@ -14,7 +14,7 @@
           Configuración Curricular Global
         </h4>
         <div class="text-caption text-grey-7">
-          Parametrización del formato de evaluación por período académico — Módulo Planificación (_ga)
+          Parametrización del formato de evaluación y estructura de lapsos por período académico — Módulo Planificación (_ga)
         </div>
       </div>
     </div>
@@ -27,7 +27,7 @@
           1. Seleccionar Período Académico
         </div>
         <div class="text-caption text-grey-7 q-mb-md">
-          Elige el período sobre el cual vas a definir el formato de evaluación curricular.
+          Elige el período sobre el cual vas a definir el formato de evaluación y la estructura académica.
         </div>
 
         <q-select
@@ -80,13 +80,21 @@
             <q-icon name="tune" size="22px" />
             Parámetros Curriculares — Período {{ nombrePeriodoActual_ga }}
           </div>
-          <q-chip
-            :color="formatoEsCuantitativo_ga ? 'cyan-8' : 'purple-8'"
-            text-color="white"
-            class="text-weight-bold"
-          >
-            FORMATO ACTUAL: {{ formatoEsCuantitativo_ga ? 'CUANTITATIVO' : 'CUALITATIVO' }}
-          </q-chip>
+          <div class="row items-center gap-2">
+            <q-chip
+              :color="formatoEsCuantitativo_ga ? 'cyan-8' : 'purple-8'"
+              text-color="white"
+              class="text-weight-bold"
+            >
+              {{ formatoEsCuantitativo_ga ? 'CUANTITATIVO' : 'CUALITATIVO' }}
+            </q-chip>
+            <q-chip color="amber-9" text-color="white" class="text-weight-bold">
+              {{ lapsosTotales_ga }} {{ lapsosTotales_ga === 1 ? 'LAPSO' : 'LAPSOS' }}
+            </q-chip>
+            <q-chip color="teal-8" text-color="white" class="text-weight-bold">
+              MÁX {{ maxEvaluacionesLapso_ga }} EVAL/LAPSO
+            </q-chip>
+          </div>
         </q-card-section>
 
         <q-card-section class="q-pa-lg">
@@ -105,7 +113,7 @@
               <!-- Tarjeta interactiva del toggle -->
               <q-card flat bordered :class="formatoEsCuantitativo_ga ? 'bg-blue-1 border-primary' : 'bg-purple-1 border-purple'" class="q-pa-md q-mb-md">
                 <div class="row items-center justify-between">
-                  <div>
+                  <div class="col">
                     <div class="text-subtitle1 text-weight-bold" :class="formatoEsCuantitativo_ga ? 'text-primary' : 'text-purple-9'">
                       <q-icon :name="formatoEsCuantitativo_ga ? 'pin' : 'star'" class="q-mr-xs" />
                       {{ formatoEsCuantitativo_ga ? 'Cuantitativo (Escala 0 - 20 pts)' : 'Cualitativo (Niveles Descriptivos)' }}
@@ -127,53 +135,117 @@
 
               <div class="row q-col-gutter-xs">
                 <div class="col-6">
-                  <div class="q-pa-sm rounded-borders text-center" :class="formatoEsCuantitativo_ga ? 'bg-primary text-white text-weight-bold' : 'bg-grey-3 text-grey-7'">
+                  <div class="q-pa-sm rounded-borders text-center cursor-pointer" :class="formatoEsCuantitativo_ga ? 'bg-primary text-white text-weight-bold' : 'bg-grey-3 text-grey-7'" @click="formatoEsCuantitativo_ga = true">
                     <q-icon name="pin" size="16px" /> CUANTITATIVO
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="q-pa-sm rounded-borders text-center" :class="!formatoEsCuantitativo_ga ? 'bg-purple-9 text-white text-weight-bold' : 'bg-grey-3 text-grey-7'">
+                  <div class="q-pa-sm rounded-borders text-center cursor-pointer" :class="!formatoEsCuantitativo_ga ? 'bg-purple-9 text-white text-weight-bold' : 'bg-grey-3 text-grey-7'" @click="formatoEsCuantitativo_ga = false">
                     <q-icon name="star" size="16px" /> CUALITATIVO
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Columna 2: Restricciones inamovibles (Product Owner) -->
+            <!-- Columna 2: Parámetros Dinámicos Configurables (Lapsos y Evaluaciones) -->
             <div class="col-12 col-md-6">
               <div class="text-subtitle2 text-weight-bold text-primary q-mb-xs flex items-center gap-2">
-                <q-icon name="lock" color="primary" />
-                Restricciones Inamovibles del Sistema (PO)
+                <q-icon name="tune" color="primary" />
+                3. Estructura de Lapsos y Límites de Evaluación
               </div>
               <div class="text-caption text-grey-7 q-mb-md">
-                Parámetros estructurales fijados por la normativa académica.
+                Ajusta los parámetros de distribución curricular para los docentes en este período.
               </div>
 
-              <div class="row q-col-gutter-sm">
+              <div class="row q-col-gutter-md">
+                <!-- Control de Lapsos Totales -->
                 <div class="col-12">
                   <q-card flat bordered class="bg-amber-1 border-amber q-pa-md">
-                    <div class="row items-center justify-between">
-                      <div>
-                        <div class="text-caption text-grey-8">Estructura del Trimestre</div>
-                        <div class="text-h6 text-weight-bolder text-amber-10">2 LAPSOS</div>
-                        <div class="text-caption text-amber-9">Dividido obligatoriamente en Lapso 1 y Lapso 2</div>
+                    <div class="row items-center justify-between q-mb-xs">
+                      <div class="text-weight-bold text-amber-10 flex items-center gap-1">
+                        <q-icon name="view_week" color="amber-10" />
+                        Número de Lapsos Totales
                       </div>
-                      <q-icon name="lock" size="32px" color="amber-8" />
+                      <q-badge color="amber-9" class="text-weight-bold text-subtitle2 q-px-sm">
+                        {{ lapsosTotales_ga }} {{ lapsosTotales_ga === 1 ? 'Lapso' : 'Lapsos' }}
+                      </q-badge>
                     </div>
+                    <div class="text-caption text-grey-8 q-mb-sm">
+                      Define en cuántas etapas de corte se dividirá la planificación docente.
+                    </div>
+
+                    <q-select
+                      v-model="lapsosTotales_ga"
+                      :options="opcionesLapsos_ga"
+                      emit-value
+                      map-options
+                      outlined
+                      dense
+                      bg-color="white"
+                      color="amber-10"
+                    >
+                      <template #prepend>
+                        <q-icon name="layers" color="amber-9" />
+                      </template>
+                    </q-select>
                   </q-card>
                 </div>
+
+                <!-- Control de Máximo de Evaluaciones por Lapso -->
                 <div class="col-12">
-                  <q-card flat bordered class="bg-red-1 border-red q-pa-md">
-                    <div class="row items-center justify-between">
-                      <div>
-                        <div class="text-caption text-grey-8">Límite por Lapso</div>
-                        <div class="text-h6 text-weight-bolder text-red-10">MÁXIMO 4 EVALUACIONES</div>
-                        <div class="text-caption text-red-9">Hasta 4 actividades evaluables por lapso</div>
+                  <q-card flat bordered class="bg-blue-1 border-blue q-pa-md">
+                    <div class="row items-center justify-between q-mb-xs">
+                      <div class="text-weight-bold text-blue-10 flex items-center gap-1">
+                        <q-icon name="assignment" color="blue-10" />
+                        Máximo de Evaluaciones por Lapso
                       </div>
-                      <q-icon name="lock" size="32px" color="red-8" />
+                      <q-badge color="blue-9" class="text-weight-bold text-subtitle2 q-px-sm">
+                        Máx {{ maxEvaluacionesLapso_ga }} Evaluaciones
+                      </q-badge>
+                    </div>
+                    <div class="text-caption text-grey-8 q-mb-sm">
+                      Límite de actividades evaluables que un profesor puede registrar en cada lapso.
+                    </div>
+
+                    <div class="row items-center q-col-gutter-sm">
+                      <div class="col">
+                        <q-slider
+                          v-model="maxEvaluacionesLapso_ga"
+                          :min="1"
+                          :max="10"
+                          :step="1"
+                          markers
+                          snap
+                          label
+                          color="blue-9"
+                        />
+                      </div>
+                      <div class="col-auto">
+                        <q-input
+                          v-model.number="maxEvaluacionesLapso_ga"
+                          type="number"
+                          min="1"
+                          max="10"
+                          outlined
+                          dense
+                          bg-color="white"
+                          style="width: 75px;"
+                          class="text-weight-bold text-center"
+                        />
+                      </div>
                     </div>
                   </q-card>
                 </div>
+              </div>
+
+              <!-- Resumen dinámico -->
+              <div class="q-mt-md q-pa-sm bg-grey-2 rounded-borders row items-center justify-between text-caption text-grey-8">
+                <span class="flex items-center gap-1">
+                  <q-icon name="info" color="primary" /> Capacidad Total del Período:
+                </span>
+                <span class="text-weight-bold text-primary">
+                  Hasta {{ capacidadTotalEvaluaciones_ga }} actividades evaluables en total por materia
+                </span>
               </div>
             </div>
 
@@ -184,7 +256,7 @@
             <template #avatar>
               <q-icon name="warning" color="orange-9" />
             </template>
-            Tiene cambios pendientes. Haga clic en <strong>Guardar Configuración</strong> para aplicarlos en la base de datos.
+            Tiene cambios pendientes de guardar. Haga clic en <strong>Guardar Configuración</strong> para aplicarlos en la base de datos.
           </q-banner>
         </q-card-section>
 
@@ -240,10 +312,33 @@ const guardando_ga = ref(false);
 const formatoOriginal_ga = ref('CUANTITATIVO');
 const formatoEsCuantitativo_ga = ref(true);
 
+const lapsosTotales_ga = ref(2);
+const lapsosTotalesOriginal_ga = ref(2);
+
+const maxEvaluacionesLapso_ga = ref(4);
+const maxEvaluacionesOriginal_ga = ref(4);
+
+const opcionesLapsos_ga = [
+  { label: '1 Lapso (Curso Intensivo / Taller Único)', value: 1 },
+  { label: '2 Lapsos (Estructura Semestral Tradicional)', value: 2 },
+  { label: '3 Lapsos (Estructura Trimestral)', value: 3 },
+  { label: '4 Lapsos (Estructura de 4 Cortes)', value: 4 },
+  { label: '5 Lapsos (Estructura Modular Ampliada)', value: 5 },
+  { label: '6 Lapsos (Estructura de 6 Cortes)', value: 6 },
+];
+
+const capacidadTotalEvaluaciones_ga = computed(() => {
+  return (Number(lapsosTotales_ga.value) || 0) * (Number(maxEvaluacionesLapso_ga.value) || 0);
+});
+
 const hayCambiosPendientes_ga = computed(() => {
   if (!configuracion_ga.value) return false;
   const formatoActual_ga = formatoEsCuantitativo_ga.value ? 'CUANTITATIVO' : 'CUALITATIVO';
-  return formatoActual_ga !== formatoOriginal_ga.value;
+  return (
+    formatoActual_ga !== formatoOriginal_ga.value ||
+    Number(lapsosTotales_ga.value) !== Number(lapsosTotalesOriginal_ga.value) ||
+    Number(maxEvaluacionesLapso_ga.value) !== Number(maxEvaluacionesOriginal_ga.value)
+  );
 });
 
 const nombrePeriodoActual_ga = computed(() => {
@@ -292,6 +387,12 @@ const cargarConfiguracionDelPeriodo_ga = async (idPeriodo_ga) => {
 
     formatoOriginal_ga.value = respuesta_ga.configuracion_ga?.formato_evaluacion_ga || 'CUANTITATIVO';
     formatoEsCuantitativo_ga.value = formatoOriginal_ga.value === 'CUANTITATIVO';
+
+    lapsosTotalesOriginal_ga.value = respuesta_ga.configuracion_ga?.lapsos_totales_ga || 2;
+    lapsosTotales_ga.value = lapsosTotalesOriginal_ga.value;
+
+    maxEvaluacionesOriginal_ga.value = respuesta_ga.configuracion_ga?.max_evaluaciones_lapso_ga || 4;
+    maxEvaluacionesLapso_ga.value = maxEvaluacionesOriginal_ga.value;
   } catch (error_ga) {
     console.error('[_ga] Error al cargar configuración:', error_ga);
     $q.notify({
@@ -316,13 +417,15 @@ const guardarConfiguracion_ga = async () => {
       periodoSeleccionado_ga.value,
       {
         formato_evaluacion_ga: formatoNuevo_ga,
-        lapsos_totales_ga: 2,
-        max_evaluaciones_lapso_ga: 4,
+        lapsos_totales_ga: Number(lapsosTotales_ga.value),
+        max_evaluaciones_lapso_ga: Number(maxEvaluacionesLapso_ga.value),
       }
     );
 
     configuracion_ga.value = respuesta_ga.configuracion_ga;
     formatoOriginal_ga.value = formatoNuevo_ga;
+    lapsosTotalesOriginal_ga.value = Number(lapsosTotales_ga.value);
+    maxEvaluacionesOriginal_ga.value = Number(maxEvaluacionesLapso_ga.value);
 
     $q.notify({
       type: 'positive',
@@ -346,6 +449,8 @@ const guardarConfiguracion_ga = async () => {
 
 const restablecerCambios_ga = () => {
   formatoEsCuantitativo_ga.value = formatoOriginal_ga.value === 'CUANTITATIVO';
+  lapsosTotales_ga.value = lapsosTotalesOriginal_ga.value;
+  maxEvaluacionesLapso_ga.value = maxEvaluacionesOriginal_ga.value;
 };
 
 onMounted(async () => {
@@ -363,8 +468,11 @@ onMounted(async () => {
 .border-amber {
   border: 1px solid #ffb300 !important;
 }
-.border-red {
-  border: 1px solid #e53935 !important;
+.border-blue {
+  border: 1px solid #1e88e5 !important;
+}
+.gap-1 {
+  gap: 4px;
 }
 .gap-2 {
   gap: 8px;

@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { execSync } from 'child_process';
+import * as path from 'path';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -9,25 +11,23 @@ export class BootstrapService_ahbb implements OnModuleInit {
   constructor(private readonly prisma_ahbb: PrismaService) {}
 
   async onModuleInit() {
-    this.logger.log('Preparando datos base de la aplicación...');
-
     try {
-      // 1. Sembrar usuarios (Admin, 3 Profesores, 4 Alumnos)
-      const usuarios = await this.sembrarUsuariosBase_ahbb();
-      
-      // 2. Limpiar y Sembrar Cursos (10 cursos con temarios profesionales)
-      await this.sembrarCursosDemo_ahbb(usuarios.profesores, usuarios.alumnos);
+      const countUsuarios = await this.prisma_ahbb.td_usuario_ahbb.count();
+      const countPeriodos = await this.prisma_ahbb.td_periodo_academico_cjgp.count();
 
-      // 3. Sembrar catálogo de la tienda
-      await this.sembrarCatalogoBase_ahbb();
-      
-      this.logger.log('Datos base listos para testing.');
+      if (countUsuarios === 0 || countPeriodos === 0) {
+        this.logger.log('🌱 Base de datos vacía detectada por primera vez. Ejecutando siembra inicial unificada...');
+        const scriptPath = path.join(process.cwd(), 'scripts', 'seed-all.cjs');
+        execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+        this.logger.log('✨ Siembra de datos inicial completada exitosamente.');
+      } else {
+        this.logger.log('ℹ️ Base de datos previamente sembrada. Omitiendo la siembra automática.');
+      }
     } catch (error) {
       const mensaje_ahbb =
         error instanceof Error ? error.message : 'Error desconocido';
 
-      this.logger.error(`Fallo preparando datos base: ${mensaje_ahbb}`);
-      throw error;
+      this.logger.error(`Fallo durante la inicialización de la base de datos: ${mensaje_ahbb}`);
     }
   }
 
@@ -211,7 +211,12 @@ export class BootstrapService_ahbb implements OnModuleInit {
         dias: ['LUNES', 'VIERNES'],
         horas: 35,
         profesor: profesoresIds_ahbb[0],
-        inscritos: [],
+        inscritos: [
+          { id: alumnosIds_ahbb[0], estatus: 'INSCRITO' },
+          { id: alumnosIds_ahbb[1], estatus: 'INSCRITO' },
+          { id: alumnosIds_ahbb[2], estatus: 'INSCRITO' },
+          { id: alumnosIds_ahbb[3], estatus: 'INSCRITO' }
+        ],
         desc: 'Refinación química de oro/plata y recubrimientos de alta calidad (Rodio y Oro).',
         temario: '• Precipitación de oro fino mediante procesos químicos\n• Preparación de baños galvánicos (Dorados y Rodiados)\n• Electropulido y desengrase electrolítico\n• Control de micras y calidad del depósito\n• Gestión de residuos tóxicos y seguridad en el laboratorio'
       }

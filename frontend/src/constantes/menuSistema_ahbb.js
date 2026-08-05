@@ -34,8 +34,7 @@ const MENU_ADMINISTRADOR_AHBB = [
   { icono: 'fact_check', etiqueta: 'Auditoría Académica', ruta: '/control-estudios/auditoria' },
 
   // ─── Control de Estudios (GA) ───
-  { icono: 'warning', etiqueta: 'Nota por Contingencia', ruta: '/control-estudios/contingencia', encabezado: 'Control de Estudios (GA)', separador: true },
-  { icono: 'tune', etiqueta: 'Configuración Curricular', ruta: '/admin/plan-estudio/configuracion-curricular' },
+  { icono: 'tune', etiqueta: 'Configuración Curricular', ruta: '/admin/plan-estudio/configuracion-curricular', encabezado: 'Control de Estudios (GA)', separador: true },
   { icono: 'checklist_rtl', etiqueta: 'Bandeja de Revisión', ruta: '/admin/plan-estudio/bandeja' },
 
   // ─── Cursos libres del sistema original (independientes de la carrera) ───
